@@ -26,7 +26,9 @@ codigosUF <- read_table("Bases/var_extras_UF.txt")
 
 codigosUF$codigoUF <- as.character(codigosUF$codigoUF)
 
+
 # criando a var codigosUF
+
 dados_br_total <- dados_br_total %>% 
   mutate(
     codigoUF = substr(as.character(CODMUNOCOR), 1, 2)
@@ -44,12 +46,88 @@ dados_es_total <- dados_br_total %>%
 codigos_psic <- readLines("Bases/codigos_psic.txt")
 
 
+
+#---------- Filtrar cids na variavel CAUSABAS
+
 ### BR PSIC
 dados_br_psic <- dados_br_total%>%
-  filter(toupper(CAUSABAS) %in% codigos_psic)
+  filter(str_detect(toupper(CAUSABAS), paste(codigos_psic, collapse = "|")))
 
 ### ES PSIC
 dados_es_psic <- dados_es_total %>%
-  filter(toupper(CAUSABAS) %in% codigos_psic)
+  filter(str_detect(toupper(CAUSABAS), paste(codigos_psic, collapse = "|")))
 
+
+
+
+
+
+
+
+#--------- FILTRADO POR OUTRAS CIDS ---------------
+
+#---------- Filtrar cids na variavel CAUSABAS_O
+
+### BR PSIC
+dados_br_causabaso <- dados_br_total%>%
+  filter(str_detect(toupper(CAUSABAS_O), paste(codigos_psic, collapse = "|")))
+
+### ES PSIC
+dados_es_causabaso <- dados_es_total %>%
+  filter(str_detect(toupper(CAUSABAS_O), paste(codigos_psic, collapse = "|")))
+
+
+#---------- Filtrar cids na variavel LINHAA
+
+### BR PSIC
+dados_br_linhaa <- dados_br_total %>%
+  filter(str_detect(toupper(LINHAA), paste(codigos_psic, collapse = "|")))
+
+### ES PSIC
+dados_es_linhaa <- dados_es_total %>%
+  filter(str_detect(toupper(LINHAA), paste(codigos_psic, collapse = "|")))
+
+
+#---------- Filtrar cids na variavel LINHAB
+
+### BR PSIC
+dados_br_linhab <- dados_br_total%>%
+  filter(str_detect(toupper(LINHAB), paste(codigos_psic, collapse = "|")))
+
+### ES PSIC
+dados_es_linhab <- dados_es_total %>%
+  filter(str_detect(toupper(LINHAB), paste(codigos_psic, collapse = "|")))
+
+
+#---------- Filtrar cids na variavel LINHAC
+
+### BR PSIC
+dados_br_linhaC <- dados_br_total%>%
+  filter(str_detect(toupper(LINHAC), paste(codigos_psic, collapse = "|")))
+
+### ES PSIC
+dados_es_linhaC <- dados_es_total %>%
+  filter(str_detect(toupper(LINHAC), paste(codigos_psic, collapse = "|")))
+
+
+#---------- Filtrar cids na variavel LINHAD
+
+### BR PSIC
+dados_br_linhaC <- dados_br_total%>%
+  filter(str_detect(toupper(LINHAD), paste(codigos_psic, collapse = "|")))
+
+### ES PSIC
+dados_es_linhaC <- dados_es_total %>%
+  filter(str_detect(toupper(LINHAD), paste(codigos_psic, collapse = "|")))
+
+
+#---------- Filtrar cids na variavel LINHAII
+
+### BR PSIC
+dados_br_linhaii <- dados_br_total%>%
+  filter(str_detect(toupper(LINHAII), paste(codigos_psic, collapse = "|")))
+
+### ES PSIC
+dados_es_linhaii <- dados_es_total %>%
+  filter(str_detect(toupper(LINHAII), paste(codigos_psic, collapse = "|")))
 
