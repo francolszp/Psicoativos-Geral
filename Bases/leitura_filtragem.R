@@ -14,14 +14,15 @@ dados_br_total <- c()
 
 for (ano in 2013:2022) {
   
-  df <- readRDS(paste0("bases_de_dados/dados_", ano,".rds"))
+  df <- readRDS(paste0("Bases/bases_de_dados/dados_", ano,".rds"))
   dados_br_total <- bind_rows(df,dados_br_total)
   
 }
 
+
 #codigos UF
 
-codigosUF <- read_table("var_extras_UF.txt")
+codigosUF <- read_table("Bases/var_extras_UF.txt")
 
 codigosUF$codigoUF <- as.character(codigosUF$codigoUF)
 
@@ -45,10 +46,10 @@ codigos_psic <- readLines("Bases/codigos_psic.txt")
 
 ### BR PSIC
 dados_br_psic <- dados_br_total%>%
-  filter(tolower(CAUSABAS) %in% codigos_psic)
+  filter(toupper(CAUSABAS) %in% codigos_psic)
 
 ### ES PSIC
 dados_es_psic <- dados_es_total %>%
-  filter(tolower(CAUSABAS) %in% codigos_psic)
+  filter(toupper(CAUSABAS) %in% codigos_psic)
 
 
