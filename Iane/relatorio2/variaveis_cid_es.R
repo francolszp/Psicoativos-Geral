@@ -25,9 +25,9 @@ Sys.setlocale("LC_ALL", "pt_BR.UTF-8") #configurar o R pra aceitar acentuação 
 
 #---------------- GRAFICO DE BARRAS DE NUMERO DE OBSERVACOES (LINHAS) POR VARIÁVEL -----------------
 
-lista_dfs_es <- list(dados_es_psic, dados_es_causabaso, dados_es_linhaa, dados_es_linhab, dados_es_linhab, 
+lista_dfs_es <- list(dados_es_causabas, dados_es_causabaso, dados_es_linhaa, dados_es_linhab, dados_es_linhab, 
                      dados_es_linhac, dados_es_linhad, dados_es_linhaii) # criar uma lista com todos os dataframes das variaveis 
-nomes_dfs_es <- c("dados_es_psic", "dados_es_causabaso", "dados_es_linhaa", "dados_es_linhab", "dados_es_linhab", 
+nomes_dfs_es <- c("dados_es_causabas", "dados_es_causabaso", "dados_es_linhaa", "dados_es_linhab", "dados_es_linhab", 
                   "dados_es_linhac", "dados_es_linhad", "dados_es_linhaii") # criar um vetor com o nome dos dataframes
 
 nomes_variaveis_es <- sub("dados_es_", "", nomes_dfs_es) #remover o prefixo dos dataframes e salvar apenas os nomes das variaveis

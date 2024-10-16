@@ -4,6 +4,9 @@
 
 #library(plotly)
 #library(htmlwidgets)
+library(readr)
+library(dplyr)
+library(lubridate)
 
 
 #------------- QUAL A CAUSA BÁSICA DE MORTE MAIS COMUM EM MORTES QUE TIVERAM A CONTRIBUIÇÃO DE PSICOATIVOS? --------
@@ -65,8 +68,9 @@ dados_es_linhaii$categoria_causabas <- sapply(dados_es_linhaii$CAUSABAS, categor
 
 #Agrupar dados da coluna categoria_causabas
 linhaii_causabas_es <- dados_es_linhaii %>%
+  filter(!is.na(categoria_causabas)) %>%
   group_by(categoria_causabas) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n(), .groups = "drop") %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -104,9 +108,9 @@ gbarra_linhaii_causabas_es <- gbarra_linhaii_causabas_es %>%
   )
 
 
-# Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_linhaii_causabas_es.html"
-saveWidget(gbarra_linhaii_causabas_es, pasta)
+#Salvar o gráfico HTML
+# pasta <- "graficos_comparacao/gbarra_linhaii_causabas_es.html"
+# saveWidget(gbarra_linhaii_causabas_es, pasta)
 
 
 #-------------- Analise mais aprofundada CID I00-I99 -----------------
@@ -151,7 +155,7 @@ df_i00ai99_es$categoria_i00ai99 <- sapply(df_i00ai99_es$CAUSABAS, categorizar_ci
 #Agrupar dados da coluna categoria_causabas
 group_i00ai99_es <- df_i00ai99_es %>%
   group_by(categoria_i00ai99) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -188,8 +192,8 @@ gbarra_i00ai99_es <-gbarra_i00ai99_es %>%
   )
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_i00ai99_es.html"
-saveWidget(gbarra_i00ai99_es, pasta)
+# pasta <- "graficos_comparacao/gbarra_i00ai99_es.html"
+# saveWidget(gbarra_i00ai99_es, pasta)
 
 
 
@@ -235,7 +239,7 @@ df_j00aj99_es$categoria_j00aj99 <- sapply(df_j00aj99_es$CAUSABAS, categorizar_ci
 #Agrupar dados da coluna categoria_causabas
 group_j00aj99_es <- df_j00aj99_es %>%
   group_by(categoria_j00aj99) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -272,8 +276,8 @@ gbarra_j00aj99_es <-gbarra_j00aj99_es %>%
   )
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_j00aj99_es.html"
-saveWidget(gbarra_j00aj99_es, pasta)
+# pasta <- "graficos_comparacao/gbarra_j00aj99_es.html"
+# saveWidget(gbarra_j00aj99_es, pasta)
 
 
 
@@ -335,7 +339,7 @@ df_c00ad48_es$categoria_c00ad48 <- sapply(df_c00ad48_es$CAUSABAS, categorizar_ci
 #Agrupar dados da coluna categoria_causabas
 group_c00ad48_es <- df_c00ad48_es %>%
   group_by(categoria_c00ad48) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -373,8 +377,8 @@ gbarra_c00ad48_es <-gbarra_c00ad48_es %>%
 
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_c00ad48_es.html"
-saveWidget(gbarra_c00ad48_es, pasta)
+# pasta <- "graficos_comparacao/gbarra_c00ad48_es.html"
+# saveWidget(gbarra_c00ad48_es, pasta)
 
 
 
@@ -421,7 +425,7 @@ df_k00ak93_es$categoria_k00ak93 <- sapply(df_k00ak93_es$CAUSABAS, categorizar_ci
 #Agrupar dados da coluna categoria_causabas
 group_k00ak93_es <- df_k00ak93_es %>%
   group_by(categoria_k00ak93) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -458,8 +462,8 @@ gbarra_k00ak93_es <-gbarra_k00ak93_es %>%
   )
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_k00ak93_es.html"
-saveWidget(gbarra_k00ak93_es, pasta)
+# pasta <- "graficos_comparacao/gbarra_k00ak93_es.html"
+# saveWidget(gbarra_k00ak93_es, pasta)
 
 
 
@@ -507,7 +511,7 @@ df_f00af99_es$categoria_f00af99 <- sapply(df_f00af99_es$CAUSABAS, categorizar_ci
 #Agrupar dados da coluna categoria_causabas
 group_f00af99_es <- df_f00af99_es %>%
   group_by(categoria_f00af99) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -544,6 +548,6 @@ gbarra_f00af99_es <-gbarra_f00af99_es %>%
   )
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_f00af99_es.html"
-saveWidget(gbarra_f00af99_es, pasta)
+# pasta <- "graficos_comparacao/gbarra_f00af99_es.html"
+# saveWidget(gbarra_f00af99_es, pasta)
 

@@ -18,16 +18,16 @@ library(ggplot2)
 
 ```{r, include=FALSE}
 # Carregar o script que gera os gráficos
-source("leitura_filtragem.R")
+source("Bases/leitura_filtragem.R")
 source("variaveis_cid.R")
 source("variaveis_cid_es.R")
-#source("bivariada_linhaii_causabas.R")
-#source("bivariada_linhaii_causabas_es.R")
+source("bivariada_linhaii_causabas.R")
+source("bivariada_linhaii_causabas_es.R")
 ```
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-df_na_porcentagem <- read.csv("graficos_comparacao/na_porcentagem_por_ano.csv")
-df_na_porcentagem_es <- read.csv("graficos_comparacao/na_porcentagem_por_ano_es.csv")
+#df_na_porcentagem <- read.csv("graficos_comparacao/na_porcentagem_por_ano.csv")
+#df_na_porcentagem_es <- read.csv("graficos_comparacao/na_porcentagem_por_ano_es.csv")
 ```
 
 <style>
@@ -69,20 +69,19 @@ Para começar a análise de dados das variáveis referentes às CIDs, precisamos
 
 ```{r, echo=FALSE, fig.show='hold', out.width="100%", message=FALSE, warning=FALSE}
 
-# Usar subplot para colocar os gráficos lado a lado
-subplot(obs.por.variavel_plotly, obs.por.variavel.es_plotly, 
-        nrows = 1, widths = c(0.49, 0.49))%>%
-  layout(title = "Número de Observações por Variável")
+# Usar subplot do pacote plotly para colocar os gráficos lado a lado
+plotly::subplot(obs.por.variavel_plotly, obs.por.variavel.es_plotly) %>%
+  layout(title = "Número de Observações por Variável", widths = c(0.49, 0.49))
+
+
 
 ```
 
 <br>
 
-Através dos gráficos, é possível perceber que tanto no estado do Espírito Santo quanto no Brasil, o número de óbitos em que os psicoativos foram contribuintes, mas não entraram na cadeia principal do óbito (circunstância representada pela variável LINHAII), é aproximadamente quatro vezes maior que nas demais situações explicitadas nesta análise.
+Através dos gráficos, é possível perceber que tanto no estado do Espírito Santo quanto no Brasil, o número de óbitos em que os psicoativos foram contribuintes, mas não entraram na cadeia principal do óbito (circunstância representada pela variável LINHAII), é consideravelmente maior que nas demais situações explicitadas nesta análise.
 
-Esse dado é importante tanto para entender as informações que serão apresentadas a seguir quanto para compreender como as drogas interferem na saúde da população. Como o número de mortes que apresentaram o uso de psicoativos como uma causa contribuinte é superior ao das demais, é esperado que, em todas as demais análises, os números vinculados à variável LINHAII sejam superiores aos das demais variáveis CID. Além disso, o gráfico fornece uma informação muito importante: **os psicoativos são muitas vezes contribuintes das mortes, mas não parte da cadeia principal que ocasionou o óbito**.
-
-Ao comparar o número de observações do Brasil e do Espírito Santo, é notório também que, no estado, o número de casos em que o uso de psicoativos está na parte mais inicial da cadeia de morte (LINHAD e LINHAC) é superior ao número de casos nas partes finais da cadeia (LINHAB e LINHAA), enquanto no país, LINHAB é superior a LINHAC e LINHAD. Em ambos, o número de mortes por psicoativos que foi a causa terminal da morte é significativamente baixo.
+Esse dado é importante tanto para entender as informações que serão apresentadas a seguir quanto para compreender como as drogas interferem na saúde da população. Como o número de mortes que apresentaram o uso de psicoativos como uma causa contribuinte é superior ao das demais variáveis, é esperado que, em todas as demais análises, os números vinculados à variável LINHAII sejam também superiores. Além disso, o gráfico fornece uma informação muito importante: **os psicoativos são muitas vezes contribuintes das mortes, mas não parte da cadeia principal que ocasionou o óbito**.
 
 No gráfico a seguir, é possível ver o número de mortes por psicoativos entre os anos de 2013 e 2022. É interessante observar que "Número de Observações" e "Número de Mortes" dizem respeito ao mesmo dado. Nesta análise, optamos por nomes diferentes, pois gostaríamos de mostrar tanto o tamanho das bases de dados analisadas quanto os dados que elas representam.
 
@@ -123,7 +122,7 @@ idade.por.variavel.es_plotly
 
 <br>
 
-Inicialmente, a primeira característica que chama atenção nos gráficos é a diferença entre o gráfico do país e o gráfico do estado, principalmente no que diz respeito aos dados de LINHAA. Nele, a média de idade das pessoas que morreram por uso de psicoativos varia de aproximadamente 42 anos em 2013 para 71 anos em 2018. Nos mesmos anos, as idades médias de óbito por psicoativo no Brasil em LINHAA foram de aproximadamente 52 e 54 anos, respectivamente. As demais variáveis CID parecem mais estáveis. Mais informações podem ser observadas nos gráficos boxplot.
+Inicialmente, a primeira característica que chama atenção nos gráficos é a diferença entre o gráfico do país e o gráfico do estado, principalmente no que diz respeito aos dados de LINHAA. No estado, a média de idade das pessoas que morreram por uso de psicoativos varia de aproximadamente 42 anos em 2013 para 52 anos em 2022. Nos mesmos anos, as idades médias de óbito por psicoativo no Brasil em LINHAA foram de aproximadamente 57 e 50 anos, respectivamente. As demais variáveis CID parecem mais estáveis. Mais informações podem ser observadas nos gráficos boxplot.
 
 <br>
 
@@ -140,8 +139,6 @@ boxplot.idades.es_plotly
 Através do boxplot, é possível visualizar a média de idade dos óbitos que ocorreram, de alguma maneira, devido ao ou como consequência do uso de psicoativos. Os gráficos abrangem dados de uma década (2013-2022).
 
 É possível perceber que a distância entre o primeiro e o terceiro quartil nos dados referentes ao Espírito Santo é, em geral, maior do que nos dados do Brasil. Isso pode indicar que as idades das mortes são mais dispersas e apresentam maior variação, o que também foi sugerido na análise do gráfico de Idade Média das Mortes por Ano.
-
-Além disso, as linhas de mediana no gráfico do Brasil são mais centrais quando comparadas às linhas de mediana do gráfico do Espírito Santo. Isto é, as idades abaixo e acima da mediana são mais equilibradas no Brasil e mais discrepantes no Espírito Santo.
 
 <br>
 
@@ -208,7 +205,7 @@ Ao somar pretos e pardos, o número de mortes dessa raça/cor é superior ao da 
 
 Além da variável Raça conter um número bastante elevado de NA's, Estado Civil e Escolaridade também apresentaram muitos dados faltantes. No caso dessas duas últimas informações sociodemográficas, optamos por retirá-las devido à falta de dados, especialmente no estado do Espírito Santo, e pela dificuldade de visualização dos gráficos, já que para cada variável do CID seria necessário plotar no mínimo três linhas.
 
-As tabelas a seguir permitem aplicar filtros para que seja possível ver a quantidade e porcentagem de dados faltantes em cada ano, para cada variável sociodemográfica e cada variável CID. É importante mencionar que o número máximo de dados faltantes no Brasil foi de 26,43%, encontrado nos dados de Escolaridade da LINHAA. No Espírito Santo, a máxima foi de 47,57%, também em Escolaridade na LINHAA.
+As tabelas a seguir permitem aplicar filtros para que seja possível ver a quantidade e porcentagem de dados faltantes em cada ano, para cada variável sociodemográfica e cada variável CID. É importante mencionar que o número máximo de dados faltantes no Brasil foi de 22,17%, encontrado nos dados de Escolaridade da LINHAA. No Espírito Santo, a máxima foi de 57,69%, também em Escolaridade na LINHAA.
 
 <br>
 
@@ -235,23 +232,23 @@ datatable(
 <br><br>
 
 ```{r, echo=FALSE, out.width="80%", fig.align="center"}
-df_na_porcentagem_es <- df_na_porcentagem_es %>%
-  rename(
-    `Ano do óbito` = ANOOBITO,
-    `Nº de Casos` = Total_Casos,
-    `Nº de NAs` = Total_NA,
-    `% de NAs` = Porcentagem_NA,
-    `Variável do CID` = Variavel_CID,
-    `Variável Sociodemográfica` = Var_Sociodemo
-  ) %>%
-  mutate(`% de NAs` = round(`% de NAs`, 2)) 
-
-datatable(
-  df_na_porcentagem_es,
-  filter = 'top',  # Adiciona filtros no topo de cada coluna
-  options = list(pageLength = 10),  # Mostra 10 linhas por página
-  caption = 'Espírito Santo: Porcentagem de Dados NA por Ano, Variável do CID e Variável Sociodemográfica'
-)
+ df_na_porcentagem_es <- df_na_porcentagem_es %>%
+   rename(
+     `Ano do óbito` = ANOOBITO,
+     `Nº de Casos` = Total_Casos,
+     `Nº de NAs` = Total_NA,
+     `% de NAs` = Porcentagem_NA,
+     `Variável do CID` = Variavel_CID,
+     `Variável Sociodemográfica` = Var_Sociodemo
+   ) %>%
+   mutate(`% de NAs` = round(`% de NAs`, 2)) 
+ 
+ datatable(
+   df_na_porcentagem_es,
+   filter = 'top',  # Adiciona filtros no topo de cada coluna
+   options = list(pageLength = 10),  # Mostra 10 linhas por página
+   caption = 'Espírito Santo: Porcentagem de Dados NA por Ano, Variável do CID e Variável Sociodemográfica'
+ )
 ```
 
 <br>

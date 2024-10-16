@@ -73,7 +73,7 @@ dados_br_linhaii$categoria_causabas <- sapply(dados_br_linhaii$CAUSABAS, categor
 #Agrupar dados da coluna categoria_causabas
 linhaii_causabas <- dados_br_linhaii %>%
   group_by(categoria_causabas) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -111,8 +111,8 @@ gbarra_linhaii_causabas <-gbarra_linhaii_causabas %>%
   )
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_linhaii_causabas.html"
-saveWidget(gbarra_linhaii_causabas, pasta)
+#pasta <- "graficos_comparacao/gbarra_linhaii_causabas.html"
+#saveWidget(gbarra_linhaii_causabas, pasta)
 
 
 #-------------- Analise mais aprofundada CID I00-I99 -----------------
@@ -157,7 +157,7 @@ df_i00ai99$categoria_i00ai99 <- sapply(df_i00ai99$CAUSABAS, categorizar_cidi00ai
 #Agrupar dados da coluna categoria_causabas
 group_i00ai99 <- df_i00ai99 %>%
   group_by(categoria_i00ai99) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -193,8 +193,8 @@ gbarra_i00ai99 <-gbarra_i00ai99 %>%
   )
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_i00ai99.html"
-saveWidget(gbarra_i00ai99, pasta)
+# pasta <- "graficos_comparacao/gbarra_i00ai99.html"
+# saveWidget(gbarra_i00ai99, pasta)
 
 
 
@@ -240,7 +240,7 @@ df_j00aj99$categoria_j00aj99 <- sapply(df_j00aj99$CAUSABAS, categorizar_cidj00aj
 #Agrupar dados da coluna categoria_causabas
 group_j00aj99 <- df_j00aj99 %>%
   group_by(categoria_j00aj99) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -276,8 +276,8 @@ gbarra_j00aj99 <-gbarra_j00aj99 %>%
   )
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_j00aj99.html"
-saveWidget(gbarra_j00aj99, pasta)
+# pasta <- "graficos_comparacao/gbarra_j00aj99.html"
+# saveWidget(gbarra_j00aj99, pasta)
 
 
 
@@ -339,7 +339,7 @@ df_c00ad48$categoria_c00ad48 <- sapply(df_c00ad48$CAUSABAS, categorizar_cidc00ad
 #Agrupar dados da coluna categoria_causabas
 group_c00ad48 <- df_c00ad48 %>%
   group_by(categoria_c00ad48) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -376,8 +376,8 @@ gbarra_c00ad48 <-gbarra_c00ad48 %>%
 
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_c00ad48.html"
-saveWidget(gbarra_c00ad48, pasta)
+# pasta <- "graficos_comparacao/gbarra_c00ad48.html"
+# saveWidget(gbarra_c00ad48, pasta)
 
 
 
@@ -425,7 +425,7 @@ df_k00ak93$categoria_k00ak93 <- sapply(df_k00ak93$CAUSABAS, categorizar_cidk00ak
 #Agrupar dados da coluna categoria_causabas
 group_k00ak93 <- df_k00ak93 %>%
   group_by(categoria_k00ak93) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -461,8 +461,8 @@ gbarra_k00ak93 <-gbarra_k00ak93 %>%
   )
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_k00ak93.html"
-saveWidget(gbarra_k00ak93, pasta)
+# pasta <- "graficos_comparacao/gbarra_k00ak93.html"
+# saveWidget(gbarra_k00ak93, pasta)
 
 
 
@@ -510,7 +510,7 @@ df_f00af99$categoria_f00af99 <- sapply(df_f00af99$CAUSABAS, categorizar_cidf00af
 #Agrupar dados da coluna categoria_causabas
 group_f00af99 <- df_f00af99 %>%
   group_by(categoria_f00af99) %>%
-  summarize(quantidade = n()) %>%
+  summarise(quantidade = n()) %>%
   arrange(desc(quantidade))
 
 # Adicionar quebras de linha usando str_wrap
@@ -546,6 +546,6 @@ gbarra_f00af99 <-gbarra_f00af99 %>%
   )
 
 # Salvar o gráfico HTML
-pasta <- "graficos_comparacao/gbarra_f00af99.html"
-saveWidget(gbarra_f00af99, pasta)
-  
+# pasta <- "graficos_comparacao/gbarra_f00af99.html"
+# saveWidget(gbarra_f00af99, pasta)
+#   
