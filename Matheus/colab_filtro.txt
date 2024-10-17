@@ -1,0 +1,29 @@
+#CÓDIGO QUE RODEI NO GOOGLE COLAB
+
+#Para ler as bases e filtrar os dados usei esse código, a parte da filtragem das cids de interesse não tinha funcionado com o #código que estava no github, então filtrei de outra forma.
+
+library(dplyr)
+
+dados_br_total <- c()
+
+for (ano in 2013:2022) {
+
+  df <- readRDS(paste0("/content/dados_", ano,".rds"))
+  dados_br_total <- bind_rows(df,dados_br_total)
+
+}
+
+str(dados_br_total)
+
+dados_es_total <- dados_br_total %>%filter(Sigla == "ES")
+str(dados_es_total)
+
+aux=c(unlist(read.table("/content/codigos_psic.txt"))) #cids de interesse
+
+dados_br_total=dados_br_total %>% filter(CAUSABAS %in% aux)
+dados_es_total=dados_es_total %>% filter(CAUSABAS %in% aux)
+
+# Fiz minhas análises usando as duas bases abaixo:
+
+saveRDS(dados_es_total,"dados_es_filtrados") 
+saveRDS(dados_br_total,"dados_br_filtrados")
