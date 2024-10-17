@@ -41,7 +41,7 @@ As tabelas de contingência construídas foram representadas por meio do gráfic
 # Resultados gerais
 
 ####
-Ao se fazer os testes Qui-Quadrado de independência, encontrou-se envidências amostrais de que a variável RACACOR possa ser independente do número de mortes categorizado pelas CIDs da CAUSABAS (5%). Os demais casos rejeitaram a hipótese de independência ($p < 0.05$).
+Ao se fazer os testes Qui-Quadrado de independência, encontrou-se envidências amostrais de que a variável RACACOR possa ser independente do número de mortes categorizado pelas CIDs da CAUSABAS. Os demais casos rejeitaram a hipótese de independência ($p < 0.05$).
 
 # Análises para o Espiríto Santo
 
