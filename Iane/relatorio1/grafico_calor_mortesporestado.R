@@ -2,6 +2,8 @@
 
 #a. DADOS DE POPULACAO
 
+pop13a21 <- readRDS("Iane/Bases/pop13a21.rds")
+
 # Pegar informacoes para pop22 presente em "dados_br_total"
 pop22 <- dados_br_total %>% select(codigoUF, pop22)
 pop22 <- pop22 %>% distinct()

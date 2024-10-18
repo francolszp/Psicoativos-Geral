@@ -7,6 +7,7 @@
 
 
 
+
 # -------------- ANALISE ESCOLARIDADE  -------------
 
 #HISTOGRAMA
@@ -116,6 +117,7 @@ series_escolaridade_br_total <- ggplot(data = dados.escolaridade.br.series, aes(
   scale_x_continuous(
     breaks = dados.escolaridade.br.series$ANOOBITO,
     labels = dados.escolaridade.br.series$ANOOBITO)+
+  scale_y_continuous(labels = scales::comma) +
   theme_classic()+
   theme(plot.title = element_text(size = 15),
         legend.title = element_text(size = size_titulo_legenda),
@@ -123,7 +125,7 @@ series_escolaridade_br_total <- ggplot(data = dados.escolaridade.br.series, aes(
 
 print (series_escolaridade_br_total)
 
-save(series_escolaridade_br_total, file="GRAFICOS_RDA/series_escolaridade_br_total.RData")
+#save(series_escolaridade_br_total, file="GRAFICOS_RDA/series_escolaridade_br_total.RData")
 
 #2.2 quantidade de mortes TOTAIS por escolaridade no espirito santo
 
@@ -147,6 +149,7 @@ series_escolaridade_es_total <- ggplot(data = dados.escolaridade.es.series, aes(
   scale_x_continuous(
     breaks = dados.escolaridade.es.series$ANOOBITO,
     labels = dados.escolaridade.es.series$ANOOBITO)+
+  scale_y_continuous(labels = scales::comma) +
   theme_classic()+
   theme(plot.title = element_text(size = 15),
         legend.title = element_text(size = size_titulo_legenda),
@@ -155,7 +158,7 @@ series_escolaridade_es_total <- ggplot(data = dados.escolaridade.es.series, aes(
 print (series_escolaridade_es_total)
 
 
-save(series_escolaridade_es_total, file="GRAFICOS_RDA/series_escolaridade_es_total.RData")
+#save(series_escolaridade_es_total, file="GRAFICOS_RDA/series_escolaridade_es_total.RData")
 
 #2.1 quantidade de mortes por psicoativos por escolaridade no brasil
 
@@ -186,7 +189,7 @@ series_escolaridade_br_psic <- ggplot(data = dados.escolaridade.br.series.psic, 
 
 print (series_escolaridade_br_psic)
 
-save(series_escolaridade_br_psic, file="GRAFICOS_RDA/series_escolaridade_br_psic.RData")
+#save(series_escolaridade_br_psic, file="GRAFICOS_RDA/series_escolaridade_br_psic.RData")
 
 #2.1 quantidade de mortes por psicoativos por escolaridade no espirito santo
 
@@ -218,7 +221,7 @@ series_escolaridade_es_psic <- ggplot(data = dados.escolaridade.es.series.psic, 
 print (series_escolaridade_es_psic)
 
 
-save(series_escolaridade_es_psic, file="GRAFICOS_RDA/series_escolaridade_es_psic.RData")
+#save(series_escolaridade_es_psic, file="GRAFICOS_RDA/series_escolaridade_es_psic.RData")
 #GRAFICO DE PROPORCAO Brasil
 
 
@@ -241,7 +244,7 @@ proporcao_escolaridade_br_psic <-ggplot(dados.escolaridade.br.series.psic, aes(x
   geom_bar(stat = "identity", position = "stack") +
   scale_fill_manual(values =  (paleta_hist(6)))+
   labs(x = "Ano", y = "Porcentagem (%)", fill = "Escolaridade",
-       title = "Proporção de Mortes por Psicoativos no Brasil por Escolaridade e Ano") +
+       title = "% de Mortes por Psicoativos no BR por Escolaridade e Ano") +
   theme_classic()+
   theme(plot.title = element_text(size = 14),
         axis.text = element_text(size = 13),
@@ -250,7 +253,7 @@ proporcao_escolaridade_br_psic <-ggplot(dados.escolaridade.br.series.psic, aes(x
 
 print(proporcao_escolaridade_br_psic)
 
-save(proporcao_escolaridade_br_psic, file="GRAFICOS_RDA/proporcao_escolaridade_br_psic.RData")
+#save(proporcao_escolaridade_br_psic, file="GRAFICOS_RDA/proporcao_escolaridade_br_psic.RData")
 
 #GRAFICO DE PROPORCAO ES
 
@@ -274,7 +277,7 @@ proporcao_escolaridade_es_psic <- ggplot(dados.escolaridade.es.series.psic, aes(
   geom_bar(stat = "identity", position = "stack") +
   scale_fill_manual(values =  (paleta_hist(5)))+
   labs(x = "Ano", y = "Porcentagem (%)", fill = "Escolaridade",
-       title = "Proporção de Mortes por Psicoativos no ES por Escolaridade e Ano") +
+       title = "% de Mortes por Psicoativos no ES por Escolaridade e Ano") +
   theme_classic()+
   theme(plot.title = element_text(size = 14),
         axis.text = element_text(size = 13),
@@ -283,5 +286,5 @@ proporcao_escolaridade_es_psic <- ggplot(dados.escolaridade.es.series.psic, aes(
 
 print(proporcao_escolaridade_es_psic)
 
-save(proporcao_escolaridade_es_psic, file="GRAFICOS_RDA/proporcao_escolaridade_es_psic.RData")
+#save(proporcao_escolaridade_es_psic, file="GRAFICOS_RDA/proporcao_escolaridade_es_psic.RData")
 

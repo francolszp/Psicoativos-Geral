@@ -1,0 +1,29 @@
+---
+title: "Análise Exploratória das Mortes por Psicoativos no Brasil e no Espírito Santo"
+author: "Iane Martins"
+date: "2024-10-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, include=FALSE}
+# Carregar o script que gera os gráficos
+source("Bases/leitura_filtragem.R")
+source("Bases/paleta_de_cores.R")
+source("raca.R")
+source("escolaridade.R")
+source("genero.R")
+source("mortes_totais.R")
+```
+
+```{r, echo=FALSE, fig.show='hold', out.width="100%", message=FALSE, warning=FALSE}
+
+proporcao_escolaridade_br_psic
+proporcao_escolaridade_es_psic
+
+
+```

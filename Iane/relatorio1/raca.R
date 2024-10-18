@@ -22,7 +22,7 @@ hist_raca_br_total <- ggplot(freq_raca_br_total, aes(x = RACACOR, y = Quantidade
   theme(plot.title = element_text(size = 15),
         legend.title = element_text(size = size_titulo_legenda),
         legend.text = element_text(size = size_texto_legenda)) +
-  labs(title = "Quantidades de mortes por Raça/Cor/Cor no Brasil",
+  labs(title = "Mortes por Raça/Cor no Brasil",
        x = "Raça/Cor",
        y = "Número de Pessoas")
 
@@ -37,10 +37,10 @@ freq_raca_br_psic <- dados_br_psic %>%
 
 hist_raca_br_psic <- ggplot(freq_raca_br_psic, aes(x = RACACOR, y = Quantidade, fill = RACACOR)) +
   geom_bar(stat = "identity") +
-  theme(plot.title = element_text(size = 20),
+  theme(plot.title = element_text(size = 15),
         legend.title = element_text(size = size_titulo_legenda),
         legend.text = element_text(size = size_texto_legenda)) +
-  labs(title = "Quantidade de mortes por psicoativo no Brasil por Raça/Cor/Cor",
+  labs(title = "Mortes por psicoativo no Brasil por Raça/Cor",
        x = "Raça/Cor",
        y = "Número de Pessoas")
 
@@ -58,7 +58,7 @@ hist_raca_es_total <- ggplot(freq_raca_es_total, aes(x = RACACOR, y = Quantidade
   theme(plot.title = element_text(size = 15),
         legend.title = element_text(size = size_titulo_legenda),
         legend.text = element_text(size = size_texto_legenda)) +
-  labs(title = "Quantidade de mortes por Raça/Cor/Cor no ES",
+  labs(title = "Mortes por Raça/Cor no ES",
        x = "Raça/Cor",
        y = "Número de Pessoas")
 
@@ -76,7 +76,7 @@ hist_raca_es_psic <- ggplot(freq_raca_es_psic, aes(x = RACACOR, y = Quantidade, 
   theme(plot.title = element_text(size = 15),
         legend.title = element_text(size = size_titulo_legenda),
         legend.text = element_text(size = size_texto_legenda)) +
-  labs(title = "Quantidade de mortes por psicoativo no ES por Raça/Cor/Cor",
+  labs(title = "Mortes por psicoativo no ES por Raça/Cor",
        x = "Raça/Cor",
        y = "Número de Pessoas")
 
@@ -111,7 +111,7 @@ series_raca_br_total <- ggplot(data = dados.raca.br.series, aes(x = ANOOBITO, y 
                                            "<br>Quantidade: ", N.obitos,
                                            "<br>Raça/Cor: ", RACACOR))) +
   scale_colour_manual(values = rev(paleta_series(5)))+
-  labs(title = "Número de óbitos Totais no Brasil por Raça/Cor",
+  labs(title = "Óbitos Totais no Brasil por Raça/Cor",
        x="Anos", y="Óbitos Totais", colour = "Raça/Cor") +
   scale_x_continuous(
     breaks = dados.raca.br.series$ANOOBITO,
@@ -123,7 +123,7 @@ series_raca_br_total <- ggplot(data = dados.raca.br.series, aes(x = ANOOBITO, y 
 
 print (series_raca_br_total)
 
-save(series_raca_br_total, file="GRAFICOS_RDA/series_raca_br_total.RData")
+#save(series_raca_br_total, file="GRAFICOS_RDA/series_raca_br_total.RData")
 #2.2 quantidade de mortes por Raça/Cor/Cor no espirito santo
 
 # montando os dados
@@ -142,7 +142,7 @@ series_raca_es_total <- ggplot(data = dados.raca.es.series,
   geom_line(linewidth = 0.5, linetype = "solid") +
   geom_point(shape = 15) +
   scale_colour_manual(values = rev(paleta_series(5)))+
-  labs(title = "Número de óbitos Totais no ES por Raça/Cor",
+  labs(title = "Óbitos Totais no ES por Raça/Cor",
        x="Anos", y="Óbitos Totais", colour = "Raça/Cor") +
   scale_x_continuous(
     breaks = dados.raca.es.series$ANOOBITO,
@@ -154,7 +154,7 @@ series_raca_es_total <- ggplot(data = dados.raca.es.series,
 
 print (series_raca_es_total)
 
-save(series_raca_es_total, file="GRAFICOS_RDA/series_raca_es_total.RData")
+#save(series_raca_es_total, file="GRAFICOS_RDA/series_raca_es_total.RData")
 #2.1 quantidade de mortes por psicoativos por raca no brasil
 
 # montando os dados
@@ -170,7 +170,7 @@ series_raca_br_psic <- ggplot(data = dados.raca.br.series.psic, aes(x = ANOOBITO
   geom_line(linewidth = 0.5, linetype = "solid") +
   geom_point(shape = 15) +
   scale_colour_manual(values = rev(paleta_series(5)))+
-  labs(title = "Número de óbitos por psicativos no Brasil por Raça/Cor",
+  labs(title = "Óbitos por psicativos no Brasil por Raça/Cor",
        x="Anos", y="Óbitos por psicoativos", colour = "Raça/Cor") +
   scale_x_continuous(
     breaks = dados.raca.br.series.psic$ANOOBITO,
@@ -182,7 +182,7 @@ series_raca_br_psic <- ggplot(data = dados.raca.br.series.psic, aes(x = ANOOBITO
 
 print (series_raca_br_psic)
 
-save(series_raca_br_psic, file="GRAFICOS_RDA/series_raca_br_psic.RData")
+#save(series_raca_br_psic, file="GRAFICOS_RDA/series_raca_br_psic.RData")
 #2.2 quantidade de mortes por psicoativos por raca no espirito santo
 
 # montando os dados
@@ -199,7 +199,7 @@ series_raca_es_psic <- ggplot(data = dados.raca.es.series.psic, aes(x = ANOOBITO
   geom_line(linewidth = 0.5, linetype = "solid") +
   geom_point(shape = 15) +
   scale_colour_manual(values = rev(paleta_series(5)))+
-  labs(title = "Número de óbitos por psicoativos no ES por Raça/Cor/Cor",
+  labs(title = "Óbitos por psicoativos no ES por Raça/Cor",
        x="Anos", y="Óbitos por psicoativos", colour = "Raça/Cor") +
   scale_x_continuous(
     breaks = dados.raca.es.series.psic$ANOOBITO,
@@ -211,7 +211,7 @@ series_raca_es_psic <- ggplot(data = dados.raca.es.series.psic, aes(x = ANOOBITO
 
 print (series_raca_es_psic)
 
-save(series_raca_es_psic, file="GRAFICOS_RDA/series_raca_es_psic.RData")
+#save(series_raca_es_psic, file="GRAFICOS_RDA/series_raca_es_psic.RData")
 
 #GRAFICO dE PROPORCAO Brasil
 
@@ -242,7 +242,7 @@ proporcao_raca_br_psic <- ggplot(dados.raca.br.series.psic,
            ) +
   scale_fill_manual(values = rev(paleta_hist(5)))+
   labs(x = "Ano", y = "Percentual (%)", fill = "Raca",
-       title = "Percentual de Mortes por Psicoativos no BR por Raça/Cor e Ano") +
+       title = "% de Mortes por Psicoativos no BR por Raça/Cor e Ano") +
   theme_classic()+
   theme(plot.title = element_text(size = 14),
         legend.title = element_text(size = size_titulo_legenda),
@@ -251,7 +251,7 @@ proporcao_raca_br_psic <- ggplot(dados.raca.br.series.psic,
 print(proporcao_raca_br_psic)
 
 
-save(proporcao_raca_br_psic, file="GRAFICOS_RDA/proporcao_raca_br_psic.RData")
+#save(proporcao_raca_br_psic, file="GRAFICOS_RDA/proporcao_raca_br_psic.RData")
 
 #GRAFICOD E PROPORCAO ES
 
@@ -274,7 +274,7 @@ proporcao_raca_es_psic <- ggplot(dados.raca.es.series.psic, aes(x = factor(ANOOB
   geom_bar(stat = "identity", position = "stack") +
   scale_fill_manual(values = rev(paleta_hist(5)))+
   labs(x = "Ano", y = "Percentual (%)", fill = "Raça/Cor",
-       title = "Percentual de Mortes por Psicoativos no ES por Raça/Cor e Ano") +
+       title = "% de Mortes por Psicoativos no ES por Raça/Cor e Ano") +
   theme_classic()+
   theme(plot.title = element_text(size = 14),
         legend.title = element_text(size = size_titulo_legenda),
@@ -282,6 +282,6 @@ proporcao_raca_es_psic <- ggplot(dados.raca.es.series.psic, aes(x = factor(ANOOB
 
 print(proporcao_raca_es_psic)
 
-save(proporcao_raca_es_psic, file="GRAFICOS_RDA/proporcao_raca_es_psic.RData")
+#save(proporcao_raca_es_psic, file="GRAFICOS_RDA/proporcao_raca_es_psic.RData")
 
 
