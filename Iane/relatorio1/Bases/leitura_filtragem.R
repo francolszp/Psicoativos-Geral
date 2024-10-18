@@ -70,6 +70,12 @@ dados_br_causabas <- dados_br_total%>%
 dados_es_causabas <- dados_es_total %>%
   filter(str_detect(toupper(CAUSABAS), paste(codigos_psic, collapse = "|")))
 
+### BR PSIC
+dados_br_psic <- dados_br_total
+
+### ES PSIC
+dados_es_psic <- dados_es_total
+
 
 
 
