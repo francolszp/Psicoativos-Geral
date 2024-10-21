@@ -27,6 +27,17 @@ r2=c("Causa básica da declaração de óbito","Cor de pele considerada","Sexo",
 rz=cbind(r1,r2)
 kable(rz,col.names=c("Variável","Descrição"),caption="Descrição das variáveis")
 ``` 
+ 
+####
+Devido a grande quantidade de CIDs foi necessário juntá-las em grupos. Na Tabela 2 estão as descrições desses grupos.
+
+```{r,echo=FALSE}
+r1=c("F100-F199 e F55","G312, G620-G622 e G721-G722","I426-I427 e I952","J662 e J702-J704","K292, K700-K709 e K860","M342","N140-N142","P042-P044, P961 e Q860","R780-R785","X400-X469","X600-X699","X850-X859","Y100-Y169","Y450-Y579")
+
+r2=c("Transtornos mentais e comportamentais","Doenças do sistema nervoso ","Doenças do aparelho circulatório","Doenças do aparelho respiratório","Doenças do aparelho digestivo","Esclerose sistêmica induzida por droga e substâncias químicas","Afecções tubulares e túbulo-intersticiais induzidas por drogas ou metais pesados","Feto/recém-nascido afetados por substâncias usadas pela mãe na gravidez","Presença de drogas e de outras substâncias normalmente não encontradas no sangue","Intoxicação acidental por e exposição a substâncias nocivas","Auto-intoxicação por substâncias nocivas","Agressões","Intoxicação por e exposição a substâncias cuja intenção não é determinada","Efeitos adversos de drogas, medicamentos e substâncias biológicas usadas com finalidade terapêutica")
+rz=cbind(r1,r2)
+kable(rz,col.names=c("Grupo","Descrição"),caption="Descrição dos agrupamentos de CIDs")
+``` 
 
 # Objetivos
 
@@ -36,15 +47,9 @@ Análisar a independência entre as variáveis sociodeomográficas e o número d
 # Metodologia
 
 ####
-As tabelas de contingência construídas foram representadas por meio do gráficos de barras. As tabelas de contingência foram construídas relacionando CAUSABAS e a determinada variável socioeconômica. Para testar a independência entre as variáveis, realizou-se o teste Qui-Quadrado de independência. O nível de confiança considerado foi de 5% ($p < 0.05$).
-
-# Resultados gerais
-
-####
-Ao se fazer os testes Qui-Quadrado de independência, encontrou-se envidências amostrais de que a variável RACACOR possa ser independente do número de mortes categorizado pelas CIDs da CAUSABAS. Os demais casos rejeitaram a hipótese de independência ($p < 0.05$).
+As tabelas de contingência foram construídas relacionando CAUSABAS e a determinada variável socioeconômica. Para testar a independência entre as variáveis, realizou-se o teste Qui-Quadrado de independência. O nível de confiança considerado foi de 5% ($p < 0.05$). Nos gráficos tipo mapa de calor as tonalidades mais escuras (cor azul) indicam baixas ou nenhuma ocorrência e as mais claras e fortes (cor amarela) indicam as maiores quantidades.
 
 # Análises para o Espiríto Santo
-
 
 ```{r,echo=FALSE,message=FALSE,results="hide"}
 library(dplyr)
@@ -71,265 +76,131 @@ cids=as.data.frame(sort(table(dados$CAUSABAS),decreasing = T))
 dados=dados %>% filter(CAUSABAS %in% cids$Var1)
 
 attach(dados)
+
+x=dados$CAUSABAS
+
+CAUSABAS <- case_when(
+  grepl("^F", x) ~ "(F100-F199)",
+  grepl("^G", x) ~ "(G312, G621 e G721)",
+  grepl("^I", x) ~ "(I426 e I427)",
+  grepl("^J", x) ~ "(J703 e J704)",
+  grepl("^K", x) ~ "(K292, K700-K709 e K860)",
+  grepl("^N", x) ~ "(N141 e N142)",
+  grepl("^P", x) ~ "(P042-P044)",  
+  grepl("^X4", x) ~ "(X400-X459)",
+  grepl("^X6", x) ~ "(X600-X699)",
+  grepl("^X8", x) ~ "(X850)",
+  grepl("^Y1", x) ~ "(Y100-Y159)",
+  grepl("^Y", x) ~ "(Y471, 494, Y499 e Y579)",
+  TRUE ~ "Outra"  # Para qualquer outro caso
+)
 ```
 
 ## RACACOR
 
-```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
+####
+Na tabela de contingência abaixo, repare as pessoas classificadas como "pardas" foram as que mais morreram independentemente das categorias.
+
+```{r,echo=FALSE,warning=FALSE,fig.align="center"}
 var_tab=table(CAUSABAS,RACACOR)
 var_plot=as.data.frame(var_tab)
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(   x = "Categoria",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.2,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 3))
+kable(var_tab)
 ```
+####
+Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável RACACOR. As mortes relacionadas com os grupos de CIDs (G312, G621 e G721) e (Y471, 494, Y499 e Y579) se apresentaram não associadas a varíavel RACACOR. As demais CIDs se apresentaram estatísticamente associadas a cor de pele ($p < 0.05$), sugerindo assim que em grande parte das vezes a cor dos indivíduos pode ter influenciado em sua morte.
 
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
+```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow","brown")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos")  + theme(legend.position = c(0.7,0.8),legend.key.size = unit(0.3,"cm"))  + scale_x_discrete(guide = guide_axis(n.dodge = 2))
-```
-
-```{r,echo=TRUE,warning=FALSE,message=FALSE}
-chisq.test(CAUSABAS,RACACOR)
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos")  +  theme(legend.position = "none") 
 ```
 
 ## SEXO
 
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
+####
+A tabela abaixo traz indicativos de que os homens morrem mais do que as mulheres em grande parte dos casos.
+
+```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 var_tab=table(CAUSABAS,SEXO)
 var_plot=as.data.frame(var_tab)
-
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(   x = "Categoria",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.2,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 3))
+kable(var_tab)
 ```
 
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
+####
+Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável SEXO. As mortes relacionadas com os grupos de CIDs (J703 e J704), (N141 e N142), (P042-P044), (X600-X699), (Y100-Y159) e (Y100-Y159) não apresentaram associação com a varíavel SEXO. As demais CIDs se apresentaram estatísticamente associadas a variável socioecômica em questão ($p < 0.05$), sugerindo assim que em grande parte das vezes o sexo dos indivíduos pode ter influenciado em sua morte.
+
+```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow","brown")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = c(0.7,0.8),legend.key.size = unit(0.3,"cm"))  + scale_x_discrete(guide = guide_axis(n.dodge = 2))
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none")
 ```
 
 ## ESTCIV
 
+####
+Nesse caso, percebe-se que os solteiros são os que mais morreram. Outro fato a se destacar e que para as CIDs (F100-F199) e (K292, K700-K709 e K860) houve um número elevado de morte dos casados.
+
 ```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
 var_tab=table(CAUSABAS,ESTCIV)
 var_plot=as.data.frame(var_tab)
-
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(   x = "Categoria",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.2,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 3))
+kable(var_tab)
 ```
 
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
+####
+Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável ESTCIV. Somente as mortes relacionadas com os grupos de CIDs (N141 e N142) e (Y471, 494, Y499 e Y579) não apresentaram associação com a varíavel ESTCIV. As demais CIDs se apresentaram estatísticamente associadas a variável socioecômica em questão ($p < 0.05$), sugerindo assim que em grande parte das vezes o estado civil dos indivíduos pode influenciar em sua morte.
+
+
+```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow","brown")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = c(0.7,0.8),legend.key.size = unit(0.3,"cm"))  + scale_x_discrete(guide = guide_axis(n.dodge = 2))
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none") 
 ```
 
 ## ESC
 
+####
+Para a escolaridade, repara-se que o que menos apresentou mortes foi a classe 12 anos ou mais.
+
 ```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
 var_tab=table(CAUSABAS,ESC)
 var_plot=as.data.frame(var_tab)
-
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(   x = "Categoria",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.2,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 3))
+kable(var_tab)
 ```
 
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
+As mortes relacionadas com os grupos de CIDs (G312, G621 e G721), (J703 e J704), (Y100-Y159) e (Y471, 494, Y499 e Y579) não apresentaram associação com a varíavel ESC, as demais apresentaram.
+
+```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow","brown")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = c(0.7,0.8),legend.key.size = unit(0.3,"cm"))  + scale_x_discrete(guide = guide_axis(n.dodge = 2))
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none")
 ```
 
-```
 ## LOCOCOR
+
+####
+Note pela tabela abaixo que a grande partes das mortes ocorreram ou em domicílio ou no hospital.
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
 var_tab=table(CAUSABAS,LOCOCOR)
 var_plot=as.data.frame(var_tab)
-
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(   x = "Categoria",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.2,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 3)) + scale_x_discrete(guide = guide_axis(n.dodge = 2))
+kable(var_tab)
 ```
 
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
+Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável LOCOCOR. As mortes relacionadas com os grupos de CIDs (J703 e J704), (N141 e N142) e (Y471, 494, Y499 e Y579) se apresentaram não associadas a varíavel LOCOCOR. As demais CIDs se apresentaram estatísticamente associadas ao local de morte ($p < 0.05$), sugerindo assim que na maioria dos casos o local em que o indivíduo estava pode ter influênciado na sua morte.
+
+```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow","brown")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = c(0.7,0.8),legend.key.size = unit(0.3,"cm"))  + scale_x_discrete(guide = guide_axis(n.dodge = 2)) + scale_y_discrete(guide = guide_axis(n.dodge = 2))
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none")
 ```
 
 ## IDADE2
+
+####
+Repare que a maioria das mortes está concetrada entre 30 e 60 anos e estão relacionadas com as CIDs (K292, K700-K709 e K860). Ao se testar a associação, observa-se que as mortes relacionadas com as CIDs (F100-F199), (I426 e I427), (K292, K700-K709 e K860), (X400-X459) e (X600-X699) apresentaram associação com a variável em questão ($p < 0.05$), as demais não se apresentaram associadas.
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
 var_tab=table(CAUSABAS,IDADE2)
 var_plot=as.data.frame(var_tab)
 
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(x = "Idade",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.2,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 3)) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + scale_x_discrete(guide = guide_axis(n.dodge = 2)) 
-```
-
-```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
-ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow","brown")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = c(0.8,0.87),legend.key.size = unit(0.3,"cm"))  + scale_x_discrete(guide = guide_axis(n.dodge = 2)) + scale_y_discrete(guide = guide_axis(n.dodge = 2))
+ggplot(var_plot, aes(x = var_plot[,1], y = as.integer(var_plot[,2]))) + xlab(" ") + ylab(" ") +
+geom_tile(color = "grey90",aes(fill = var_plot[,3])) + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=4)) + labs(fill="Número de mortes por psicoativos") + scale_x_discrete(guide = guide_axis(n.dodge = 1)) + scale_y_continuous(breaks = seq(0, 100, by = 10)) + theme(legend.position = "top",legend.key.size = unit(0.3,"cm"),legend.text = element_text(size = 4),legend.title=element_text(size = 4))
 ``` 
 
 
-# Análises para o Brasil
 
-```{r,echo=FALSE,message=FALSE,results="hide"}
-dados_br_total=readRDS("dados_br_filtrados")
-
-dados_br_total$DTOBITO <- ymd(dados_br_total$DTOBITO)
-dados_br_total$ANOOBITO <- year(dados_br_total$DTOBITO)
-
-#criar coluna da idade em anos completos
-dados_br_total$DTNASC  <- ymd(dados_br_total$DTNASC)  
-dados_br_total$DTOBITO  <- ymd(dados_br_total$DTOBITO)
-dados_br_total$IDADE2  <- floor(interval(start  =  dados_br_total$DTNASC , 
-                                   end = dados_br_total$DTOBITO) / years(1)) 
-
-dados=dados_br_total
-
-attach(dados)
-
-aux=c(unlist(read.table("codigos_psic.txt")))
-dados=dados %>% filter(CAUSABAS %in% aux)
-
-cids=sort(table(dados$CAUSABAS),decreasing=T) #observando as cids que mais ocorreram
-cids=as.data.frame(sort(table(dados$CAUSABAS),decreasing = T))
-dados=dados %>% filter(CAUSABAS %in% cids$Var1)
-
-attach(dados)
-
-#chisq.test(CAUSABAS,RACACOR) # [3:4] [3:7]
-#chisq.test(CAUSABAS,SEXO) # [1:2] [3:7]
-#chisq.test(CAUSABAS,ESC) # [3:7]
-#chisq.test(CAUSABAS,LOCOCOR)
-#chisq.test(CAUSABAS,ANOOBITO)
-#chisq.test(CAUSABAS,IDADE2) # [3:7]
-```
-
-## RACACOR
-
-```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
-var_tab=table(CAUSABAS,RACACOR)
-var_plot=as.data.frame(var_tab)
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(   x = "Categoria",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.1,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 4))
-```
-
-## SEXO
-
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
-var_tab=table(CAUSABAS,SEXO)
-var_plot=as.data.frame(var_tab)
-
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(   x = "Categoria",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.1,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 4))
-```
-
-## ESTCIV
-
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
-var_tab=table(CAUSABAS,ESTCIV)
-var_plot=as.data.frame(var_tab)
-
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(   x = "Categoria",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.1,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 4))
-```
-
-
-## ESC
-
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
-var_tab=table(CAUSABAS,ESC)
-var_plot=as.data.frame(var_tab)
-
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(   x = "Categoria",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.1,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 4))
-```
-## LOCOCOR
-
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
-var_tab=table(CAUSABAS,LOCOCOR)
-var_plot=as.data.frame(var_tab)
-
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(   x = "Categoria",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.1,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 4)) + scale_x_discrete(guide = guide_axis(n.dodge = 2))
-```
-
-## IDADE2
-
-```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
-var_tab=table(CAUSABAS,IDADE2)
-var_plot=as.data.frame(var_tab)
-
-ggplot(var_plot, aes(x = var_plot[,2], y = var_plot[,3], fill = var_plot[,1])) +geom_bar(stat = "identity") + 
-labs(x = "Idade",y = "Número de mortes por psicoativo", fill = "Grupo") + 
-scale_y_continuous(breaks = seq(0, sum(var_plot[,3]), by = 5000)) + 
-theme(legend.key.size = unit(0.1,"cm"),
-                                      legend.justification = c("right", "top"),
-                                      legend.box.just = "right",
-                                      legend.margin =margin(0, 0, 0, 0)) + 
-guides(fill = guide_legend(ncol = 4)) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + scale_x_discrete(guide = guide_axis(n.dodge = 2)) 
-```
