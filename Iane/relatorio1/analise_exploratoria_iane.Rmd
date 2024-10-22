@@ -1,0 +1,152 @@
+---
+title: "Análise Exploratória das Mortes por Psicoativos no Brasil e no Espírito Santo"
+author: "Iane Martins"
+date: "2024-10-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, include=FALSE}
+library(gridExtra)
+library(plotly)
+library(scales)
+library(readxl)
+library(ggplot2)
+library(readr)
+library(plotly)
+library(dplyr)
+library(data.table)
+library(lubridate)
+library(ggplot2)
+library(RColorBrewer)
+library(reactR)
+library(htmltools)
+library(reactable)
+library(stringr)
+library(sidrar)
+library(janitor)
+library(readxl)
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(latex2exp)
+library(geobr)
+library(scales)
+library(sf)
+library(lwgeom)
+
+source("Bases/paletas_de_cores.R")
+source("Bases/leitura_filtragem.R")
+source("raca.R")
+source("escolaridade.R")
+source("genero.R")
+source("mortes_totais.R")
+```
+
+<br>
+
+# Introdução
+
+Este relatório busca examinar as variáveis sociodemográficas presentes na base de dados do Sistema de Informação sobre Mortalidade (SIM) em relação às mortes por psicoativos ocorridas no Brasil e no estado do Espírito Santo entre os anos de 2013 e 2022.
+
+Para obter os dados de morte por psicoativos foram usados os Códigos Diagnósticos (CID) que tivessem alguma relação com o uso de substâncias. 
+
+# Análise Sociodemográfica
+
+## Gênero
+
+A seguir é possível visualizar a discrepância entre o número de homens e de mulheres que morreram por mortes totais e por psicoativos tanto no Brasil quando no Espírito Santo. Em ambas as localizações o número de óbitos de indivíduos do gênero masculino foi superior ao número de mortes em pessoas do gênero feminino. Ao observar a diferença entre as mortes totais e mortes por psicoativos, porém, tem-se que o número de homens que faleceram por uso de substância é consideravelmente superior ao número de mulheres. Ao mesmo tempo, enquanto o número de óbitos em mulheres que morreram por uso de substãncias se mantêm bastante estável, os dados sobre os homens apresentam uma curva crescente de 2019 a 2021.
+
+<br>
+
+```{r echo=FALSE, out.width = "100%"}
+
+series_genero_br_total
+series_genero_es_total
+series_genero_br_psic
+series_genero_es_psic
+
+```
+
+<br> Com o objetivo de melhorar a visualização dos dados, é possível também
+analizar o gráfico de porcentagem. Este gráfico utiliza a porcentagem de cada dado
+com relação ao total e através dele fica clara a discrepância entre o número
+de morte por gênero, no Brasil e no Espírito Santo.
+
+<br>
+
+```{r out.width = "100%", echo=FALSE}
+proporcao_genero_br_psic
+proporcao_genero_es_psic
+
+```
+
+<br>
+
+## Raça
+
+Os dados sobre as raças dos indivíduos falecidos no Brasil como um todo
+são bem parecidos com os dados do Espírito Santo. Em ambos os casos, o
+número de mortes de pessoas brancas é, na maioria das vezes, superior ao número de mortes de
+pessoas pardas e sempre superior ao número de pessoas pretas, amarelas e indígenas. Entretanto, nas mortes por psicoativos, o número de pessoas pardas é predominante.
+
+Para a pesquisa, pode ser importante discutir a forma de analisar esses
+dados e se é válido unir as categorias Parda e Preta.
+
+<br>
+
+```{r out.width = "100%", echo=FALSE}
+
+series_raca_br_total
+series_raca_es_total
+series_raca_br_psic
+series_raca_es_psic
+
+ 
+```
+
+<br>
+
+
+
+
+```{r out.width = "100%", echo=FALSE}
+proporcao_raca_br_psic
+proporcao_raca_es_psic
+
+```
+
+<br>
+
+## Escolaridade
+
+A variável escolaridade foi a que apresentou maior discrepância com o
+passar do tempo. Sobre esse aspecto, é importante destacar o número alto
+de informações não disponíveis (NA), o que pode ter causado interferência
+nos dados.Também é válido ressaltar que existe mais de uma variável que
+retrata a escolaridade dos indivíduos, entretanto, todas elas apresentam
+um alto índice de NA's.
+
+<br>
+
+```{r out.width = "100%", echo=FALSE}
+series_escolaridade_br_total
+series_escolaridade_es_total
+series_escolaridade_br_psic
+series_escolaridade_es_psic
+
+```
+
+<br>
+
+```{r out.width = "100%", echo=FALSE}
+proporcao_escolaridade_br_psic
+proporcao_escolaridade_es_psic
+
+```
+
+<br>
