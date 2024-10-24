@@ -1,5 +1,6 @@
 ---
-title: "Relatório_1_MMAM"
+title: "Análise de associação entre as variáveis sociodemográficas e as mortes por psicoativos"
+date: "`r Sys.Date()`"
 output: html_document
 fontsize: 12pt
 spacing: double
@@ -18,7 +19,7 @@ Para o estudo, considerou-se dados de `r dim(dadosbr)[1]` notificações da base
 
 
 ####
-Na Tabela 1 estão os nomes dos registros (variáveis) considerados e sua descrição.
+Na Tabela abaixo estão os nomes dos registros (variáveis) considerados e sua descrição.
 
 ```{r,echo=FALSE}
 r1=c("CAUSABAS","RACACOR","SEXO","ESTCIV","ESC","OCUP","LOCOCOR","IDADE2")
@@ -47,7 +48,7 @@ Análisar a independência entre as variáveis sociodeomográficas e o número d
 # Metodologia
 
 ####
-Quando possível, foram contruídas tabelas de contingência relacionando cada grupo de CIDs com as variáveis socioeconômicas. Para testar a independência entre as variáveis socioeconômicas e as mortes relacionadas a um determinado grupo de CIDs, realizou-se o teste Qui-Quadrado de independência. O nível de confiança considerado foi de 5% ($p < 0.05$). Nos gráficos tipo mapa de calor as tonalidades mais escuras (cor azul) indicam baixas ou nenhuma ocorrência e as mais claras e fortes (cor amarela) indicam as maiores quantidades.
+Quando possível, foram contruídas tabelas de contingência relacionando cada grupo de CIDs com as variáveis sociodemográficas. Para testar a independência entre as variáveis sociodemográficas e as mortes relacionadas a um determinado grupo de CIDs, realizou-se o teste Qui-Quadrado de independência. O nível de confiança considerado foi de 5% ($p < 0.05$). Nos gráficos tipo mapa de calor as tonalidades mais escuras (cor azul) indicam baixas ou nenhuma ocorrência e as mais claras e fortes (cor amarela) indicam as maiores quantidades.
 
 # Análises para o Espiríto Santo
 
@@ -94,6 +95,18 @@ CAUSABAS <- case_when(
   grepl("^Y", x) ~ "(Y471, 494, Y499 e Y579)",
   TRUE ~ "Outra"  # Para qualquer outro caso
 )
+
+df_idades <- data.frame(Idade = IDADE2)
+df_idades <- df_idades %>%
+  mutate(Faixa_Etaria = case_when(
+    Idade >= 0 & Idade < 13 ~ "Criança (0-12)",
+    Idade >= 13 & Idade < 18 ~ "Adolescente (13-17)",
+    Idade >= 18 & Idade < 65 ~ "Adulto (18-65)",
+    Idade >= 65 ~ "Idoso"
+  ))
+
+
+IDADE2= df_idades$Faixa_Etaria  
 ```
 
 ## RACACOR
@@ -107,11 +120,11 @@ var_plot=as.data.frame(var_tab)
 kable(var_tab)
 ```
 ####
-Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável RACACOR. As mortes relacionadas com os grupos de CIDs (G312, G621 e G721) e (Y471, 494, Y499 e Y579) não  apresentaram  associação com a varíavel RACACOR. As demais CIDs se apresentaram estatísticamente associadas a cor de pele ($p < 0.05$), sugerindo assim que em grande parte das vezes a cor dos indivíduos pode ter influenciado em sua morte.
+Foi realizada uma análise da significância da associação entre o número de mortes por psicoativos e a variável RACACOR. As mortes relacionadas com os grupos de CIDs (G312, G621 e G721) e (Y471, 494, Y499 e Y579) não  apresentaram  associação com a varíavel RACACOR. As demais CIDs se apresentaram estatísticamente associadas a cor de pele ($p < 0.05$), sugerindo assim que em grande parte das vezes a cor dos indivíduos tem uma associação estatística com sua morte.
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos")  +  theme(legend.position = "none") 
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos")  + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))    
 ```
 
 ## SEXO
@@ -126,11 +139,11 @@ kable(var_tab)
 ```
 
 ####
-Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável SEXO. As mortes relacionadas com os grupos de CIDs (J703 e J704), (N141 e N142), (P042-P044), (X600-X699), (Y100-Y159) e (Y100-Y159) não apresentaram associação com a varíavel SEXO. As demais CIDs se apresentaram estatísticamente associadas a variável socioecômica em questão ($p < 0.05$), sugerindo assim que em grande parte das vezes o sexo dos indivíduos pode ter influenciado em sua morte.
+Foi realizada uma análise da significância da associação entre o número de mortes por psicoativos e a variável SEXO. As mortes relacionadas com os grupos de CIDs (J703 e J704), (N141 e N142), (P042-P044), (X600-X699), (Y100-Y159) e (Y100-Y159) não apresentaram associação com a varíavel SEXO. As demais CIDs se apresentaram estatísticamente associadas a variável socioecômica em questão ($p < 0.05$), sugerindo assim que em grande parte das vezes o sexo dos indivíduos tenha associação estatística com seu falecimento.
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none")
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))   
 ```
 
 ## ESTCIV
@@ -145,12 +158,12 @@ kable(var_tab)
 ```
 
 ####
-Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável ESTCIV. Somente as mortes relacionadas com os grupos de CIDs (N141 e N142) e (Y471, 494, Y499 e Y579) não apresentaram associação com a varíavel ESTCIV. As demais CIDs se apresentaram estatísticamente associadas a variável socioecômica em questão ($p < 0.05$), sugerindo assim que em grande parte das vezes o estado civil dos indivíduos pode influenciar em sua morte.
+Foi realizada uma análise da significância da associação entre o número de mortes por psicoativos e a variável ESTCIV. Somente as mortes relacionadas com os grupos de CIDs (N141 e N142) e (Y471, 494, Y499 e Y579) não apresentaram associação com a varíavel ESTCIV. As demais CIDs se apresentaram estatísticamente associadas a variável socioecômica em questão ($p < 0.05$), sugerindo assim uma associação estatística entre o estado civil e a morte.
 
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none") 
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))    
 ```
 
 ## ESC
@@ -168,7 +181,7 @@ As mortes relacionadas com os grupos de CIDs (G312, G621 e G721), (J703 e J704),
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none")
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))   
 ```
 
 ## LOCOCOR
@@ -182,11 +195,11 @@ var_plot=as.data.frame(var_tab)
 kable(var_tab)
 ```
 
-Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável LOCOCOR. As mortes relacionadas com os grupos de CIDs (J703 e J704), (N141 e N142) e (Y471, 494, Y499 e Y579) não  apresentaram  associação com a varíavel LOCOCOR. As demais CIDs se apresentaram estatísticamente associadas ao local de morte ($p < 0.05$), sugerindo assim que na maioria dos casos o local em que o indivíduo estava pode ter influênciado na sua morte.
+Foi realizada uma análise da significância da associação entre o número de mortes por psicoativos e a variável LOCOCOR. As mortes relacionadas com os grupos de CIDs (J703 e J704), (N141 e N142) e (Y471, 494, Y499 e Y579) não  apresentaram  associação com a varíavel LOCOCOR. As demais CIDs se apresentaram estatísticamente associadas ao local de morte ($p < 0.05$), sugerindo assim que na maioria dos casos o local em que o indivíduo estava pode ter influênciado na sua morte.
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none")
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))   
 ```
 
 ## IDADE2
@@ -198,15 +211,17 @@ Repare que a maioria das mortes está concetrada entre 30 e 60 anos e estão rel
 var_tab=table(CAUSABAS,IDADE2)
 var_plot=as.data.frame(var_tab)
 
-ggplot(var_plot, aes(x = var_plot[,1], y = as.integer(var_plot[,2]))) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90",aes(fill = var_plot[,3])) + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=4)) + labs(fill="Número de mortes por psicoativos") + scale_x_discrete(guide = guide_axis(n.dodge = 1)) + scale_y_continuous(breaks = seq(0, 100, by = 10)) + theme(legend.position = "top",legend.key.size = unit(0.3,"cm"),legend.text = element_text(size = 4),legend.title=element_text(size = 4))
+ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2])) + xlab(" ") + ylab(" ") +
+geom_tile(color = "grey90",aes(fill = var_plot[,3])) + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=4)) + labs(fill="Número de mortes por psicoativos") + scale_x_discrete(guide = guide_axis(n.dodge = 1)) + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))  
 ``` 
 
 # Análises para o Brasil
 
 ```{r,echo=FALSE,message=FALSE,results="hide"}
+
 rm(list = ls())
 gc()
+
 dados_br_total=readRDS("dados_br_filtrados")
 
 dados_br_total$DTOBITO <- ymd(dados_br_total$DTOBITO)
@@ -232,7 +247,6 @@ dados=dados %>% filter(CAUSABAS %in% cids$Var1)
 attach(dados)
 
 x=dados$CAUSABAS
-
 CAUSABAS <- case_when(
   grepl("^F", x) ~ "(F100-F199 e F55)",
   grepl("^G", x) ~ "(G312, G620-G622 e G721-G722)",
@@ -250,6 +264,19 @@ CAUSABAS <- case_when(
   grepl("^Y1", x) ~ "(Y100-Y169)",
   grepl("^Y", x) ~ "(Y450-Y579)",
 )
+
+df_idades <- data.frame(Idade = IDADE2)
+df_idades <- df_idades %>%
+  mutate(Faixa_Etaria = case_when(
+    Idade >= 0 & Idade < 13 ~ "Criança (0-12)",
+    Idade >= 13 & Idade < 18 ~ "Adolescente (13-17)",
+    Idade >= 18 & Idade < 65 ~ "Adulto (18-65)",
+    Idade >= 65 ~ "Idoso"
+  ))
+
+
+IDADE2= df_idades$Faixa_Etaria  
+ 
 ```
 
 ## RACACOR
@@ -263,11 +290,11 @@ var_plot=as.data.frame(var_tab)
 kable(var_tab)
 ```
 ####
-Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável RACACOR. As mortes relacionadas com os grupos de CIDs (M342) e (R780-R785) não  apresentaram  associação com a varíavel RACACOR. As demais CIDs se apresentaram estatísticamente associadas a cor de pele ($p < 0.05$), sugerindo assim que em grande parte das vezes a cor dos indivíduos pode ter influenciado em sua morte.
+Foi realizada uma análise da significância da associação entre o número de mortes por psicoativos e a variável RACACOR. As mortes relacionadas com os grupos de CIDs (M342) e (R780-R785) não  apresentaram  associação com a varíavel RACACOR. As demais CIDs se apresentaram estatísticamente associadas a cor de pele ($p < 0.05$), sugerindo assim que em grande parte das vezes a cor dos indivíduos pode ter influenciado em sua morte.
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos")  +  theme(legend.position = "none") 
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos")  + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))    
 ```
 
 ## SEXO
@@ -282,11 +309,11 @@ kable(var_tab)
 ```
 
 ####
-Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável SEXO. As mortes relacionadas com os grupos de CIDs (R780-R785), (N140-N142) e (M342) não apresentaram associação com a varíavel SEXO. As demais CIDs se apresentaram estatísticamente associadas a variável socioecômica em questão ($p < 0.05$), sugerindo assim que em grande parte das vezes o sexo dos indivíduos pode ter influenciado em sua morte.
+Foi realizada uma análise da significância da associação entre o número de mortes por psicoativos e a variável SEXO. As mortes relacionadas com os grupos de CIDs (R780-R785), (N140-N142) e (M342) não apresentaram associação com a varíavel SEXO. As demais CIDs se apresentaram estatísticamente associadas a variável socioecômica em questão ($p < 0.05$).
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none")
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 90, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))   
 ```
 
 ## ESTCIV
@@ -301,12 +328,12 @@ kable(var_tab)
 ```
 
 ####
-Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável ESTCIV. Somente as mortes relacionadas com os grupos de CIDs (R780-R785) e (P042-P044, P961 e Q860) não apresentaram associação com a varíavel ESTCIV. As demais CIDs se apresentaram estatísticamente associadas a variável socioecômica em questão ($p < 0.05$), sugerindo assim que em grande parte das vezes o estado civil dos indivíduos pode influenciar em sua morte.
+Foi realizada uma análise da significância da associação entre o número de mortes por psicoativos e a variável ESTCIV. Somente as mortes relacionadas com os grupos de CIDs (R780-R785) e (P042-P044, P961 e Q860) não apresentaram associação com a varíavel ESTCIV. As demais CIDs se apresentaram estatísticamente associadas a variável socioecômica em questão ($p < 0.05$).
 
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none") 
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))    
 ```
 
 ## ESC
@@ -324,7 +351,7 @@ As mortes relacionadas com os grupos de CIDs (R780-R785), (N140-N142), (M342) e 
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none")
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))   
 ```
 
 ## LOCOCOR
@@ -338,11 +365,11 @@ var_plot=as.data.frame(var_tab)
 kable(var_tab)
 ```
 
-Foi realizada uma análise de independência para investigar a relação entre o número de mortes por psicoativos e a variável LOCOCOR. Somente as mortes relacionadas com o grupo de CIDs (R780-R785) não  apresentaram  associação com a varíavel LOCOCOR. As demais CIDs se apresentaram estatísticamente associadas ao local de morte ($p < 0.05$), sugerindo assim que na maioria dos casos o local em que o indivíduo estava pode ter influênciado na sua morte.
+Foi realizada uma análise da significância da associação entre o número de mortes por psicoativos e a variável LOCOCOR. Somente as mortes relacionadas com o grupo de CIDs (R780-R785) não  apresentaram  associação com a varíavel LOCOCOR. As demais CIDs se apresentaram estatísticamente associadas ao local de morte ($p < 0.05$).
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%",fig.align="center"}
 ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2], fill = var_plot[,3])) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") +  theme(legend.position = "none")
+geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))   
 ```
 
 ## IDADE2
@@ -354,11 +381,11 @@ Repare que a maioria das mortes está concetrada entre 40 e 70 anos e estão rel
 var_tab=table(CAUSABAS,IDADE2)
 var_plot=as.data.frame(var_tab)
 
-ggplot(var_plot, aes(x = var_plot[,1], y = as.integer(var_plot[,2]))) + xlab(" ") + ylab(" ") +
-geom_tile(color = "grey90",aes(fill = var_plot[,3])) + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=4)) + labs(fill="Número de mortes por psicoativos") + scale_x_discrete(guide = guide_axis(n.dodge = 1)) + scale_y_continuous(breaks = seq(0, 100, by = 10)) + theme(legend.position = "top",legend.key.size = unit(0.3,"cm"),legend.text = element_text(size = 4),legend.title=element_text(size = 4))
+ggplot(var_plot, aes(x = var_plot[,1], y = var_plot[,2])) + xlab(" ") + ylab(" ") +
+geom_tile(color = "grey90",aes(fill = var_plot[,3])) + scale_fill_gradientn(colors =c("darkblue","yellow")) + theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5,size=6),axis.text.y = element_text(angle = 0, hjust = 0.5,size=6)) + labs(fill="Número de mortes por psicoativos") + theme(legend.position = "top",legend.key.size = unit(0.7,"cm"),legend.text = element_text(size = 6),legend.title=element_text(size = 6))  
 ``` 
 
 ## CONCLUSÕES
 
 ####
-No caso do Brasil, todas as variáveis socioeconômicas estavam associadas as mortes relacionadas ao grupo (R780-R785). O comportamento do ES é similar ao do Brasil no geral. A maioria das mortes tem relação com os grupos de CIDs (F100-F199 e F55) e (K292, K700-K709 e K860) no Brasil e no ES.
+No caso do Brasil, todas as variáveis sociodemográficas estavam associadas com mortes relacionadas ao grupo (R780-R785). O comportamento do ES é similar ao do Brasil no geral. A maioria das mortes tem relação com os grupos de CIDs (F100-F199 e F55) e (K292, K700-K709 e K860) no Brasil e no ES.
