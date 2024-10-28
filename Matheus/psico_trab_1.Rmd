@@ -359,7 +359,7 @@ geom_tile(color = "grey90") + scale_fill_gradientn(colors =c("darkblue","yellow"
 ## LOCOCOR
 
 ####
-Note pela tabela abaixo que a grande partes das mortes ocorreram ou em domicílio ou no hospital.
+Note pela tabela abaixo que a grande partes das mortes ocorreram ou em domicílio ou no hospital. O número 6 é referente a aldeia indígena.
 
 ```{r,echo=FALSE,warning=FALSE,out.width="120%" ,fig.align="center"}
 var_tab=table(CAUSABAS,LOCOCOR)
