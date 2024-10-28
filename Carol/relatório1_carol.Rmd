@@ -1,0 +1,2139 @@
+---
+title: Análise exploratória sobre mortalidade por psicoativos no Brasil e no Espírito
+  Santo
+author: "Caroline de Oliveira"
+date: "2024-10-17"
+output:
+  bookdown::html_document2: 
+    toc: true
+    toc_float: true
+    latex_engine: xelatex
+  bookdown::pdf_document2: default
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r, warning = FALSE, message=FALSE, echo=FALSE, include=FALSE}
+
+
+library(gridExtra)
+library(plotly)
+library(scales)
+library(readxl)
+library(ggplot2)
+library(readr)
+library(plotly)
+library(dplyr)
+library(data.table)
+library(lubridate)
+library(ggplot2)
+library(RColorBrewer)
+library(reactR)
+library(htmltools)
+library(reactable)
+library(stringr)
+library(sidrar)
+library(janitor)
+library(readxl)
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(latex2exp)
+library(geobr)
+library(scales)
+library(sf)
+library(lwgeom)
+library(grid)
+library(patchwork)
+library(ggpubr)
+
+# paleta de series === CORES VIVAS (primárias) POIS AS LINHAS SÃO FINAS
+
+
+paleta_series <- manual_pal(c("#010440","#ff7f00","#1e96fc", "#ff6392", 
+                              "#009D00","#9381ff" ,"#e31a1c", "#25a18e"
+                        ))
+
+# paleta de histograma === SIMILAR A DE SÉRIES PORÉM COM CORES MAIS AGRADÁVEIS DE OLHAR
+
+paleta_hist <- manual_pal(c("#A6CEE3", "#FB9A99", "#FFDB58", "#1F78B4",
+                            "#B2DF8A","#33A02C", "#8F8164"
+                            ))
+#TAMANHO DO TEXTO DA LEGENDA
+size_titulo_legenda <- 12
+size_texto_legenda <- 10
+
+
+```
+
+
+```{r eval=FALSE, include=FALSE}
+source("Bases/leitura_filtragem.R")
+```
+
+```{r include=FALSE}
+
+dados_br_total <- c()
+
+for (ano in 2013:2022) {
+  
+  df <- readRDS(paste0("Bases/bases_de_dados/dados_", ano,".rds"))
+  dados_br_total <- bind_rows(df,dados_br_total)
+  
+}
+
+
+#ADICIONANDO COLUNAS EXTRAS
+
+#criar coluna do ano em que o obito ocorreu
+dados_br_total$DTOBITO <- ymd(dados_br_total$DTOBITO)
+dados_br_total$ANOOBITO <- year(dados_br_total$DTOBITO)
+
+#criar coluna da idade em anos completos
+dados_br_total$DTNASC  <- ymd(dados_br_total$DTNASC)  
+dados_br_total$DTOBITO  <- ymd(dados_br_total$DTOBITO)
+dados_br_total$IDADE2  <- floor(interval(start  =  dados_br_total$DTNASC , 
+                                   end = dados_br_total$DTOBITO) / years(1)) # arrendondado p baixo - anos completos
+
+
+#codigos UF
+
+codigosUF <- read_table("Bases/var_extras_UF.txt")
+
+codigosUF$codigoUF <- as.character(codigosUF$codigoUF)
+
+
+# criando a var codigosUF
+
+dados_br_total <- dados_br_total %>% 
+  mutate(
+    codigoUF = substr(as.character(CODMUNOCOR), 1, 2)
+  )
+
+dados_br_total <- inner_join(dados_br_total, codigosUF, by = "codigoUF")
+
+
+
+dados_es_total <- dados_br_total %>%
+  filter(Sigla == "ES")
+
+
+#ler codigos das cids que tem a ver com uso de psicoativos
+codigos_psic <- readLines("Bases/codigos_psic.txt")
+
+
+
+#---------- Filtrar cids na variavel CAUSABAS
+
+### BR PSIC
+dados_br_psic <- dados_br_total%>%
+  filter(str_detect(toupper(CAUSABAS), paste(codigos_psic, collapse = "|")))
+
+### ES PSIC
+dados_es_psic <- dados_es_total %>%
+  filter(str_detect(toupper(CAUSABAS), paste(codigos_psic, collapse = "|")))
+
+
+
+```
+
+<br>
+
+# Introdução
+
+Este relatório busca examinar as variáveis sociodemográficas presentes na base de dados do Sistema de Informação sobre Mortalidade (SIM) em relação às mortes por psicoativos ocorridas no Brasil e no estado do Espírito Santo entre os anos de 2013 e 2022. 
+
+Para obter os dados de morte por psicoativos foram usados os Códigos Diagnósticos (CID 10) . No decorrer deste relatório serão abordadas mais detalhadamente informações sobre:
+
+- **i.** CID's;\
+- **ii.** Variáveis sociodemográficas como Idade, Gênero, Raça, Escolaridade e Estado Civil;\
+- **iii.** Variáveis sociodemográficas para as CIDs com maior número de casos;\
+
+
+# Informações Sobre as CID's
+
+A Classificação Internacional de Doenças e Problemas Relacionados à Saúde (também conhecida como Classificação Internacional de Doenças -- CID 10) é publicada pela Organização Mundial de Saúde (OMS) e visa padronizar a codificação de doenças e outros problemas relacionados à saúde. (MEDICINA NET, 2024)
+
+Dentro dessa classificação da CID-10 é possível encontrar diversas CID's, que representam mortes causadas por psicoativos, dentre elas, diversas foram selecionadas para a realização dessas análises. A lista completa desse segmento da CID-10 pode ser vista a seguir:
+
+```{r echo=FALSE}
+
+CIDS <- read_excel("CIDS2.xlsx")
+tabela_redutiva <- reactable::reactable(CIDS,
+                                        groupBy = c("CID", "Subdivisão"),
+                                        filterable = TRUE,
+                                        showSortable = TRUE,
+                                        searchable = TRUE,
+                                        showPageSizeOptions = TRUE,
+                                        pageSizeOptions = c(10, 15, 27),
+                                        defaultPageSize = 27,
+                                        striped = TRUE,
+                                        highlight = TRUE,
+                                        theme = reactable::reactableTheme(
+                                          color = "#000000",
+                                          borderColor = "#dfe2e5",
+                                          stripedColor = "#f6f8fa",
+                                          highlightColor = "#f0f5f9",
+                                          cellPadding = "8px 12px",
+                                          style = list(fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif"),
+                                          searchInputStyle = list(width = "100%")
+                                        ))
+
+tabela_redutiva
+```
+
+
+# Análise Sociodemográfica
+
+<br>
+
+## Estado Civil
+
+Ao analisar os dados de estado civil, percebe-se que, enquanto a maior
+parte dos falecidos totais (tanto do Brasil quanto do Espírito Santo) é
+casada, quando se observa os falecidos por psicoativos, a maior parte
+deles é solteira. Esse fenômeno acontece tanto a nível estadual quando a
+nível nacional. Vale ressaltar que o número de dados não disponíveis (NA)
+nessa variável também foi elevado e pode ter influenciado os dados.
+
+É válido mencionar que por se tratar de uma informação que requer certa
+formalidade e inclusive documentação que comprove o vínculo afetivo, os dados podem não ser eficientes em expressar se os falecidos tinham de fato um companheiro ou
+companheira com quem se relacionavam.
+
+<br>
+
+```{r include=FALSE}
+## Preparação dos gráficos
+## BR ##
+dados_prop_estciv_br <- dados_br_total %>%
+  group_by(ESTCIV) %>%
+  summarise(n = n()) %>%
+  mutate(p = n/sum(n), LOC = "Brasil")
+barplot_estciv_br <-  ggplot(dados_prop_estciv_br, aes(x = fct_reorder(ESTCIV,p), y = p, fill = ESTCIV)) +
+  geom_bar(stat = "identity", aes(text  = paste("<br>Percentual: ", p, "%",
+                                                "<br>Estado Civil: ", ESTCIV)))+
+
+  scale_fill_manual(values=paleta_hist(5))+
+  theme_minimal() +
+  labs(title = "Óbitos por estado civil no Brasil",
+       x = " Estado Civil",
+       y = "Proporção (%) ",
+       fill = "Estado civil")+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),      # Tamanho dos textos dos eixos
+    axis.text.x = element_blank(),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+## ES ##
+dados_prop_estciv_es <- dados_es_total %>%
+  group_by(ESTCIV) %>%
+  summarise(n = n()) %>%
+  mutate(p= round((n/sum(n))*100, 2), LOC = "Brasil")
+
+barplot_estciv_es <- ggplot(dados_prop_estciv_es, aes(x = fct_reorder(ESTCIV,p), y = p, fill = ESTCIV)) +
+  geom_bar(stat = "identity", aes(text  = paste("<br>Percentual: ", p, "%",
+                                                "<br>Estado Civil: ", ESTCIV)))+
+  scale_fill_manual(values=paleta_hist(5))+
+  theme_classic() +
+  labs(title = "Óbitos no Espírito Santo por estado civil",
+       x = "Estado Civil ",
+       y = "Proporção (%) ",
+       fill= 'Estado civil')+
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),
+    axis.text.x = element_blank(),# Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+ 
+```
+```{r include=FALSE}
+## Preparação dos gráficos
+## BR PSIC##
+dados_prop_estciv_br.psic <- dados_br_psic %>%
+  group_by(ESTCIV) %>%
+  summarise(n = n()) %>%
+  mutate(p= round((n/sum(n))*100, 2), LOC = "Brasil")
+
+barplot_estciv_br_psic <- ggplot(dados_prop_estciv_br.psic, aes(x = fct_reorder(ESTCIV, p), y = p, fill = ESTCIV)) +
+  geom_bar(stat = "identity", aes(text  = paste("<br>Percentual: ", p, "%",
+                                                "<br>Estado Civil: ", ESTCIV)))+
+  scale_fill_manual(values=paleta_hist(5))+
+  theme_minimal() +
+  labs(title = "Óbitos por psicoativos a partir do estado civil no Brasil",
+       x = "Estado Civil ",
+       y = "Proporção (%) ",
+       fill= 'Estado civil')+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),
+    axis.text.x = element_blank(),# Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+##ES PSIC##
+
+dados_prop_estciv_es.psic <- dados_es_psic %>%
+  group_by(ESTCIV) %>%
+  summarise(n = n()) %>%
+  mutate(p= round((n/sum(n))*100, 2), LOC = "Brasil")
+
+
+barplot_estciv_es_psic <- ggplot(dados_prop_estciv_es.psic, aes(x = fct_reorder(ESTCIV, p), y = p, fill = ESTCIV)) +
+  geom_bar(stat = "identity", aes(text  = paste("<br>Percentual: ", p, "%",
+                                                "<br>Estado Civil: ", ESTCIV)))+
+  scale_fill_manual(values=paleta_hist(5))+
+  theme_minimal() +
+  labs(title = "Óbitos por psicoativos a partir do estado civil no Espírito Santo",
+       x = "Estado Civil ",
+       y = "Proporção (%) ",
+       fill= 'Estado civil')+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),
+    axis.text.x = element_blank(),# Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+```
+
+
+
+
+
+```{r out.width = "100%", echo=FALSE}
+
+subplot(style(ggplotly(barplot_estciv_br, tooltip = "text"),
+              showlegend = T)  |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.2 ,
+                                    y = 1.05,
+                                    text = "Mortes Totais BR",
+                                    showarrow = F, 
+                                    xref='paper', 
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(barplot_estciv_es, tooltip = "text"), 
+              showlegend = FALSE)  |> 
+          layout(annotations = list(x = 0.6 ,
+                                    y = 1.05,
+                                    text = "Mortes Totais ES",
+                                    showarrow = F,
+                                    xref='paper', 
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))))  |> 
+  layout(title =  'Porcentagem de Mortes Relacionadas por Estado Civil')
+
+
+## PSIC ##
+subplot(style( ggplotly(barplot_estciv_br_psic, tooltip = "text"), showlegend = T)  |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.2 ,
+                                    y = 1.05,
+                                    text = "Mortes Psicoativos BR",
+                                    showarrow = F,
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(barplot_estciv_es_psic, tooltip = "text"), showlegend = F)  |> 
+          layout(annotations = list(x = 0.6 ,
+                                    y = 1.05,
+                                    text = "Mortes Psicoativos ES",
+                                    showarrow = F,
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10)))) |>
+  layout(title = '')
+```
+
+<br>
+```{r include=FALSE}
+## Preparação para gráficos ##
+### ------------- GRÁFICOS DE PROPORÇÃO -------------
+## ES
+#1 Criando data frame com proporção
+dados.estciv.es.series <- data.frame(
+  dados_es_total %>% group_by(ANOOBITO, ESTCIV) %>%
+    summarise(N.obitos = n())
+)
+dados.estciv.es.series <- dados.estciv.es.series %>%
+  group_by(ANOOBITO) %>%
+  mutate(total_mortes = sum(N.obitos),
+         porcentagem = (N.obitos / total_mortes) * 100) %>%
+  ungroup()
+
+#2 Criar o gráfico
+grafico_prop_estciv_es <- ggplot(dados.estciv.es.series, aes(x = factor(ANOOBITO), y = porcentagem, fill = ESTCIV,text  = paste("Ano: ", factor(ANOOBITO),
+                                                                                                                                "<br>Percentual: ",round(porcentagem, 2),"%",
+                                                                                                                                "<br>Estado Civil: ", ESTCIV))) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values =  (paleta_hist(5)))+
+  labs(
+    title = "Proporção de Mortes no Espírito Santo por Estado civil e Ano",
+    y = "Porcentagem (%)",
+    x = "",
+    fill = "Estado Civil"
+  )+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+## BR
+#1 Criando data frame com proporção
+dados.estciv.br.series <- data.frame(
+  dados_br_total %>% group_by(ANOOBITO, ESTCIV) %>%
+    summarise(N.obitos = n())
+)
+dados.estciv.br.series <- dados.estciv.br.series %>%
+  group_by(ANOOBITO) %>%
+  mutate(total_mortes = sum(N.obitos),
+         porcentagem = (N.obitos / total_mortes) * 100) %>%
+  ungroup()
+
+#2 Criar o gráfico
+grafico_prop_estciv_br <- ggplot(dados.estciv.br.series,
+                                 aes(x = factor(ANOOBITO),
+                                     y = porcentagem, fill = ESTCIV,text  = paste("Ano: ", factor(ANOOBITO),
+                                                                                  "<br>Percentual: ",round(porcentagem, 2),"%",
+                                                                                  "<br>Estado Civil: ", ESTCIV))) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values =  (paleta_hist(5)))+
+  labs(
+    title = "Proporção de Mortes no Brasil por Estado civil e Ano",
+    y = "Porcentagem (%)",
+    x = "",
+    fill = "Estado Civil"
+  )+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+### ESTADO CIVIL POR PSICOATIVO
+## ES PSIC
+#1 Criando data frame com proporção
+dados.estciv.es.series.psic <- data.frame(
+  dados_es_psic %>% group_by(ANOOBITO, ESTCIV) %>%
+    summarise(N.obitos = n())
+)
+dados.estciv.es.series.psic <- dados.estciv.es.series.psic %>%
+  group_by(ANOOBITO) %>%
+  mutate(total_mortes = sum(N.obitos),
+         porcentagem = (N.obitos / total_mortes) * 100) %>%
+  ungroup()
+
+#2 Criar o gráfico
+grafico_prop_estciv_es_psic <- ggplot(dados.estciv.es.series.psic, aes(x = factor(ANOOBITO),
+                                                                       y = porcentagem,
+                                                                       fill = ESTCIV,text  = paste("Ano: ", factor(ANOOBITO),
+                                                                                                   "<br>Percentual: ",round(porcentagem, 2),"%",
+                                                                                                   "<br>Estado Civil: ", ESTCIV))) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values =  (paleta_hist(5)))+
+  labs(
+    title = "Proporção de Mortes por Psicoativos no ES por Estado civil e Ano",
+    y = "Porcentagem (%)",
+    x = "",
+    fill = "Estado Civil"
+  )+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 13),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+## BR PSIC
+#1 Criando data frame com proporção
+dados.estciv.br.series.psic <- data.frame(
+  dados_br_psic %>% group_by(ANOOBITO, ESTCIV) %>%
+    summarise(N.obitos = n())
+)
+dados.estciv.br.series.psic <- dados.estciv.br.series.psic %>%
+  group_by(ANOOBITO) %>%
+  mutate(total_mortes = sum(N.obitos),
+         porcentagem = (N.obitos / total_mortes) * 100) %>%
+  ungroup()
+#2 Criar o gráfico
+grafico_prop_estciv_br_psic <- ggplot(dados.estciv.br.series.psic, aes(x = factor(ANOOBITO),
+                                                                       y = porcentagem,  fill = ESTCIV,text  = paste("Ano: ", factor(ANOOBITO),
+                                                                                                                     "<br>Percentual: ",round(porcentagem, 2),"%",
+                                                                                                                     "<br>Estado Civil: ", ESTCIV))) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values =  (paleta_hist(5)))+
+  labs(
+    title = "Proporção de Mortes por psicoativos no Brasil por Estado civil e Ano",
+    y = "Porcentagem (%)",
+    x = "",
+    fill = "Estado Civil"
+  )+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 13),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+```
+
+
+<br>
+
+```{r out.width = "100%", echo=FALSE}
+
+subplot(style(ggplotly(grafico_prop_estciv_br, tooltip = "text"),
+              showlegend = T)  |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.2 ,
+                                    y = 1.05,
+                                    text = "Mortes Totais BR",
+                                    showarrow = F, 
+                                    xref='paper', 
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(grafico_prop_estciv_es, tooltip = "text"), 
+              showlegend = FALSE)  |> 
+          layout(annotations = list(x = 0.6 ,
+                                    y = 1.05,
+                                    text = "Mortes Totais ES",
+                                    showarrow = F,
+                                    xref='paper', 
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))))  |> 
+  layout(title =  'Porcentagem de Mortes Relacionadas por Estado Civil')
+ 
+subplot(style( ggplotly(grafico_prop_estciv_br_psic, tooltip = "text"), showlegend = T)  |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.2 ,
+                                    y = 1.05,
+                                    text = "Mortes Psicoativos BR",
+                                    showarrow = F,
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(grafico_prop_estciv_es_psic, tooltip = "text"), showlegend = F)  |> 
+          layout(annotations = list(x = 0.6 ,
+                                    y = 1.05,
+                                    text = "Mortes Psicoativos ES",
+                                    showarrow = F,
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10)))) |>
+  layout(title = '')
+```
+
+<br>
+
+
+## Idade
+
+Ao analisar a variável idade, é possível seguir duas abordagens, por
+anos de idade e por faixas etárias. Neste relatório serão feitas as duas análises, iniciando pelos anos de idade.
+
+É possível observar que em todos os boxplots das idades por ano, a variabilidade dessas idades ao longo dos anos é baixa. Percebe-se também que a média de
+idade de mortes geral é mais elevada que a média de idade de mortes pelo
+uso de psicoativos.
+
+```{r include=FALSE}
+## BOXPLOT IDADE##
+# BR TOTAL ----------------------------------------------------------------
+base_boxplot_br <- dados_br_total %>%
+  select(ANOOBITO, IDADE2) %>%
+  filter(!is.na(ANOOBITO) & !is.na(IDADE2))
+#gráfico
+boxplot.anoidad.br <- base_boxplot_br %>%
+  ggplot(aes( x = as.factor(ANOOBITO), y=IDADE2, group = ANOOBITO))+
+  geom_errorbar(stat = "boxplot", width = 0.2)+
+  geom_boxplot( fill = "#a6cee3" )+
+  labs(
+    title = "Brasil geral",
+    x = "Ano",
+    y = "Idade"
+  ) +
+  theme_classic() +
+  scale_y_continuous(limits = c(0, 135), breaks = seq(0, 135, by = 20))+
+  scale_x_discrete()+
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text.x = element_text(size = 9),
+    axis.text = element_text(size = 12),                   # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),               
+    legend.text = element_text(size = size_texto_legenda)                 # Tamanho do texto da legenda
+  )
+
+# BR PSIC ---------------------------------------------------------------------
+base_boxplot_br_psic <- dados_br_psic %>%
+  select(ANOOBITO, IDADE2) %>%
+  filter(!is.na(ANOOBITO) & !is.na(IDADE2))
+
+boxplot.anoidad.br.psic <- base_boxplot_br_psic %>%
+  ggplot(aes( x = as.factor(ANOOBITO), y=IDADE2, group = ANOOBITO))+
+  geom_errorbar(stat = "boxplot", width = 0.2)+
+  geom_boxplot( fill = "#EFA1AE" )+
+  labs(
+    title = "Brasil, por psicoativos",
+    x = "Ano",
+    y = "Idade"
+  ) +
+  theme_classic()+
+  scale_y_continuous(limits = c(0, 135), breaks = seq(0, 135, by = 20))+
+  scale_x_discrete()+
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text.x = element_text(size = 9),
+    axis.text = element_text(size = 12),# Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),               
+    legend.text = element_text(size = size_texto_legenda)                 # Tamanho do texto da legenda
+  )
+
+#ES TOTAL --------------------------------------------------------------
+
+base_boxplot_es <- dados_es_total %>%
+  select(ANOOBITO, IDADE2) %>%
+  filter(!is.na(ANOOBITO) & !is.na(IDADE2))
+
+boxplot.anoidad.es <- base_boxplot_es %>%
+  ggplot(aes( x = as.factor(ANOOBITO), y=IDADE2, group = ANOOBITO))+
+  geom_errorbar(stat = "boxplot", width = 0.2)+
+  geom_boxplot( fill = "#a6cee3" )+
+  labs(
+    title = "Espírito Santo geral",
+    x = "Ano",
+    y = "Idade"
+  ) +
+  theme_classic() +
+  scale_y_continuous(limits = c(0, 135), breaks = seq(0, 135, by = 20))+
+  scale_x_discrete()+
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text.x = element_text(size = 9),
+    axis.text = element_text(size = 12),# Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),               
+    legend.text = element_text(size = size_texto_legenda)                 # Tamanho do texto da legenda
+  )
+# ES PSIC --------------------------------------------------------------------
+
+base_boxplot_es_psic <- dados_es_psic %>%
+  select(ANOOBITO, IDADE2) %>%
+  filter(!is.na(ANOOBITO) & !is.na(IDADE2))
+
+boxplot.anoidad.es.psic <- base_boxplot_es_psic %>%
+  ggplot(aes( x = as.factor(ANOOBITO), y=IDADE2, group = ANOOBITO))+
+  geom_errorbar(stat = "boxplot", width = 0.2)+
+  geom_boxplot( fill = "#EFA1AE" )+
+  labs(
+    title = " Espírito Santo, por psicoativos",
+    x = "Ano",
+    y = "Idade"
+  ) +
+  theme_classic() +
+  scale_y_continuous(limits = c(0, 135), breaks = seq(0, 135, by = 20))+
+  scale_x_discrete()+
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text.x = element_text(size = 9),
+    axis.text = element_text(size = 12),                   
+    legend.title = element_text(size = size_titulo_legenda),               
+    legend.text = element_text(size = size_texto_legenda)                 # Tamanho do texto da legenda
+  )
+
+```
+
+```{r echo=FALSE, warning=FALSE}
+# Rotacionando as labels do eixo X e ajustando o tamanho do texto
+boxplot.anoidad.br <- boxplot.anoidad.br +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10)  # Rotacionar e ajustar tamanho
+  )
+
+boxplot.anoidad.br.psic <- boxplot.anoidad.br.psic +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10)  # Rotacionar e ajustar tamanho
+  )
+
+boxplot.anoidad.es <- boxplot.anoidad.es +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10)  # Rotacionar e ajustar tamanho
+  )
+
+boxplot.anoidad.es.psic <- boxplot.anoidad.es.psic +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10)  # Rotacionar e ajustar tamanho
+  )
+
+# Repetir o processo para a combinação dos gráficos
+figura1 <- ggpubr::ggarrange(
+  boxplot.anoidad.br, boxplot.anoidad.br.psic,
+  ncol = 2,  
+  common.legend = TRUE,
+  legend = "bottom",
+  align = "hv",
+  widths = c(1, 1),
+  heights = c(1, 1)
+)
+
+figura2 <- ggpubr::ggarrange(
+  boxplot.anoidad.es, boxplot.anoidad.es.psic,
+  ncol = 2,  
+  common.legend = TRUE,
+  legend = "bottom",
+  align = "hv",
+  widths = c(1, 1),
+  heights = c(1, 1)
+)
+
+# Adiciona o título
+figura_com_titulo1 <- ggpubr::annotate_figure(figura1, top = text_grob("Óbitos da Idade por ano no Brasil", face = "bold", size = 14))
+figura_com_titulo2 <- ggpubr::annotate_figure(figura2, top = text_grob("Óbitos da Idade por ano no Espírito Santo", face = "bold", size = 14))
+
+# Exibe os gráficos com títulos
+print(figura_com_titulo1)
+print(figura_com_titulo2)
+
+```
+
+<br>
+
+## Faixa Etária
+
+**Menor de idade** - entre 0 e 17 anos \
+**Jovem-Adulto** - entre 18 e 30 anos \
+**Adulto** - entre 31 e 55 anos \
+**Idoso** - acima de 55 anos \
+
+Nos gráficos por faixa etária foram separados os indivíduos menores de idade dos maiores de idade. Nota-se que o número de menor de idade que morre pelo uso de
+psicoativo é muito baixo: uma única pessoa de 17 anos no Espírito Santo e menos de 35 pessoas no Brasil. Percebe-se também que nas mortes gerais no Brasil e
+no Espírito Santo, a maior parte das pessoas em disparado eram  da categoria idosa, enquanto na morte pelo uso de psicoativos, os idosos e adultos estão similares, porém a maior parte das pessoas eram adultos.
+
+<br>
+
+```{r include=FALSE}
+## PREPARAÇÃO ##
+#criando variavel categórica para idade
+intervalos <- c(0, 17, 30, 55, Inf)  # Limites dos intervalos: 0-12, 13-24, 25-55, 56+
+categorias <- c("Menor de idade", "Jovem-Adulto", "Adulto", "Idoso")  # Rótulos das 
+#PALETA DE CORES PARA SÉRIES
+#GRÁFICO DE SÉRIE ANO X OBITO POR IDADE NO ESPÍRITO SANTO, GERAL
+# MONTANDO DADOS
+dados_es_total$categoria_idade <- cut(dados_es_total$IDADE2, intervalos, labels = categorias)
+dados_es_total$DTOBITO <- ymd(dados_es_total$DTOBITO)
+dados_es_total$ANOOBITO <- year(dados_es_total$DTOBITO)
+dados.grafico.series.esto <- data.frame(
+  dados_es_total %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+# GRAFICO
+graf.serie.idade.es.t <- ggplot(data = dados.grafico.series.esto, aes(x = ANOOBITO, y = N.obitos,
+                                                                      colour = categoria_idade)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = categoria_idade,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Faixa Etária: ", categoria_idade))) +
+  labs(title = "Óbitos Totais no Espírito Santo por Faixa etária",
+       x="Anos", y="Óbitos Totais", colour = "Faixa etária") +
+  scale_x_continuous(
+    breaks = dados.grafico.series.esto$ANOOBITO,
+    labels = dados.grafico.series.esto$ANOOBITO)+
+  scale_colour_manual(name = "Faixa etária", values = paleta_series(5),
+                      labels = c("Menor de idade (0-17 anos)",
+                                 "Jovem-Adulto (18 - 30 anos)",
+                                 "Adulto (31 - 55 anos)",
+                                 "Idoso(56+ anos)"))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))                 # Tamanho do texto da legenda
+
+#GRÁFICO DE SÉRIE ANO  X   OBITO POR IDADE NO ESPÍRITO SANTO, POR PSICOATIVOS
+# MONTANDO DADOS
+dados_es_psic$categoria_idade <- cut(dados_es_psic$IDADE2, intervalos, labels = categorias)
+dados_es_psic$DTOBITO <- ymd(dados_es_psic$DTOBITO)
+dados_es_psic$ANOOBITO <- year(dados_es_psic$DTOBITO)
+
+dados.grafico.series.esps <- data.frame(
+  dados_es_psic %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+# GRAFICO
+graf.serie.idade.es.p <- ggplot(data = dados.grafico.series.esps, aes(x = ANOOBITO, y = N.obitos,
+                                                                      colour = categoria_idade)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = categoria_idade,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Faixa Etária: ", categoria_idade))) +
+  labs(title = "Óbitos pelo uso de psicoativos no Espírito Santo por Faixa etária",
+       x="Anos", y="Número de óbitos", colour = "Faixa etária") +
+  scale_x_continuous(
+    breaks = dados.grafico.series.esps$ANOOBITO,
+    labels = dados.grafico.series.esps$ANOOBITO)+
+  scale_colour_manual(name = "Faixa etária", values = paleta_series(5),
+                      labels = c("Menor de idade (0-17 anos)",
+                                 "Jovem-Adulto (18 - 30 anos)",
+                                 "Adulto (31 - 55 anos)",
+                                 "Idoso(56+ anos)"))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 13),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+#GRÁFICO DE SÉRIE ANO X OBITO POR IDADE NO BRASIL, GERAL
+dados_br_total$categoria_idade <- cut(dados_br_total$IDADE2, intervalos, labels = categorias)
+dados_br_total$DTOBITO <- ymd(dados_br_total$DTOBITO)
+dados_br_total$ANOOBITO <- year(dados_br_total$DTOBITO)
+
+dados.grafico.series.brto <- data.frame(
+  dados_br_total %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n()/1000)
+)
+# GRAFICO
+graf.serie.idade.br.t <- ggplot(data = dados.grafico.series.brto, aes(x = ANOOBITO, y = N.obitos,
+                                                                      colour = categoria_idade)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = categoria_idade,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Faixa Etária: ", categoria_idade))) +
+  labs(title = " Óbitos Totais no Brasil por Faixa etária",
+       x="Anos", y="Óbitos Totais x 1000", colour = "Faixa etária") +
+  scale_x_continuous(
+    breaks = dados.grafico.series.brto$ANOOBITO,
+    labels = dados.grafico.series.brto$ANOOBITO)+
+  scale_colour_manual(name = "Faixa etária", values = paleta_series(5),
+                      labels = c("Menor de idade (0-17 anos)",
+                                 "Jovem-Adulto (18 - 30 anos)",
+                                 "Adulto (31 - 55 anos)",
+                                 "Idoso(56+ anos)"))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+# #GRÁFICO DE SÉRIE ANOS OBITO POR IDADE NO BRASIL, POR PSICOATIVO
+dados_br_psic$categoria_idade <- cut(dados_br_psic$IDADE2, intervalos, labels = categorias)
+dados_br_psic$DTOBITO <- ymd(dados_br_psic$DTOBITO)
+dados_br_psic$ANOOBITO <- year(dados_br_psic$DTOBITO)
+
+dados.grafico.series.brps <- data.frame(
+  dados_br_psic %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+# GRAFICO
+graf.serie.idade.br.p <- ggplot(data = dados.grafico.series.brps, aes(x = ANOOBITO, y = N.obitos,
+                                                                      colour = categoria_idade)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = categoria_idade,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Faixa Etária: ", categoria_idade))) +
+  labs(title = " Óbitos pelo uso de psicoativos no Brasil por Faixa etária",
+       x="Anos", y="Número de óbitos", colour = "Faixa etária") +
+  scale_x_continuous(
+    breaks = dados.grafico.series.brps$ANOOBITO,
+    labels = dados.grafico.series.brps$ANOOBITO)+
+  scale_colour_manual(name = "Faixa etária", values = paleta_series(5),
+                      labels = c("Menor de idade (0-17 anos)",
+                                 "Jovem-Adulto (18 - 30 anos)",
+                                 "Adulto (31 - 55 anos)",
+                                 "Idoso(56+ anos)"))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+```
+
+
+```{r out.width = "100%", echo=FALSE}
+
+subplot(style(ggplotly(graf.serie.idade.br.t, tooltip = "text"),
+              showlegend = T)  |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.2 ,
+                                    y = 1.05,
+                                    text = "Mortes Totais BR x 1000",
+                                    showarrow = F, 
+                                    xref='paper', 
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(graf.serie.idade.es.t, tooltip = "text"), 
+              showlegend = FALSE)  |> 
+          layout(annotations = list(x = 0.6 ,
+                                    y = 1.05,
+                                    text = "Mortes Totais ES",
+                                    showarrow = F,
+                                    xref='paper', 
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))))  |> 
+  layout(title =  'Mortes Relacionadas por Faixa Etária')
+ 
+subplot(style( ggplotly(graf.serie.idade.br.p, tooltip = "text"), showlegend = T)  |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.2 ,
+                                    y = 1.05,
+                                    text = "Mortes Psicoativos BR",
+                                    showarrow = F,
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(graf.serie.idade.es.p, tooltip = "text"), showlegend = F)  |> 
+          layout(annotations = list(x = 0.6 ,
+                                    y = 1.05,
+                                    text = "Mortes Psicoativos ES",
+                                    showarrow = F,
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10)))) |>
+  layout(title = '')
+```
+
+<br>
+
+```{r include=FALSE}
+## PREPARAÇÃO GRAF IDADE PROPORÇÃO##
+## ES PSIC
+#1 Criando data frame com proporção
+dados.idade.es.series.psic <- data.frame(
+  dados_es_psic %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+dados.idade.es.series.psic <- dados.idade.es.series.psic %>%
+  group_by(ANOOBITO) %>%
+  mutate(total_mortes = sum(N.obitos),
+         porcentagem = (N.obitos / total_mortes) * 100) %>%
+  ungroup()
+#2 Criar o gráfico
+grafico_prop_idade_es_psic <- ggplot(dados.idade.es.series.psic, aes(x = factor(ANOOBITO), y = porcentagem, fill = categoria_idade,text  = paste("Ano: ", factor(ANOOBITO),
+                                                                                                                                                 "<br>Percentual: ",round(porcentagem, 2),"%",
+                                                                                                                                                 "<br>Faixa Etária: ", categoria_idade))) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values =  (paleta_hist(4)))+
+  labs(
+    title = "Proporção de Mortes por psicoativo no ES por Idade e Ano",
+    y = "Porcentagem (%)",
+    x = "",
+    fill = "Idade"
+  )+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 13),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+# BR PSIC
+#1 Criando data frame com proporção
+dados.idade.br.series.psic <- data.frame(
+  dados_br_psic %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+dados.idade.br.series.psic <- dados.idade.br.series.psic %>%
+  group_by(ANOOBITO) %>%
+  mutate(total_mortes = sum(N.obitos),
+         porcentagem = (N.obitos / total_mortes) * 100) %>%
+  ungroup()
+#2 Criar o gráfico
+grafico_prop_idade_br_psic <- ggplot(dados.idade.br.series.psic, aes(x = factor(ANOOBITO), y = porcentagem, fill = categoria_idade,text  = paste("Ano: ", factor(ANOOBITO),
+                                                                                                                                             "<br>Percentual: ",round(porcentagem, 2),"%",
+                                                                                                                                                "<br>Faixa Etária: ", categoria_idade))) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values =  (paleta_hist(4)))+
+  labs(
+    title = "Proporção de Mortes por psicoativo no Brasil por Idade e Ano",
+    y = "Porcentagem (%)",
+    x = "",
+    fill = "Idade"
+  )+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 13),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+## IDADE GERAL
+## IDADE ES GERAL
+#1 Criando data frame com proporção
+dados.idade.es.series <- data.frame(
+  dados_es_total %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+dados.idade.es.series <- dados.idade.es.series %>%
+  group_by(ANOOBITO) %>%
+  mutate(total_mortes = sum(N.obitos),
+         porcentagem = (N.obitos / total_mortes) * 100) %>%
+  ungroup()
+#2 Criar o gráfico
+grafico_prop_idade_es <- ggplot(dados.idade.es.series, aes(x = factor(ANOOBITO), y = porcentagem, fill = categoria_idade,text  = paste("Ano: ", factor(ANOOBITO),
+                                                                                                                                       "<br>Percentual: ",round(porcentagem, 2),"%",
+                                                                                                                                       "<br>Faixa Etária: ", categoria_idade))) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values =  (paleta_hist(4)))+
+  labs(
+    title = "Proporção de Mortes no Espírito Santo por Idade e Ano",
+    y = "Porcentagem (%)",
+    x = "",
+    fill = "Idade"
+  )+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+## idade BR GERAL
+#1 Criando data frame com proporção
+dados.idade.br.series <- data.frame(
+  dados_br_total %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+dados.idade.br.series <- dados.idade.br.series %>%
+  group_by(ANOOBITO) %>%
+  mutate(total_mortes = sum(N.obitos),
+         porcentagem = (N.obitos / total_mortes) * 100) %>%
+  ungroup()
+#2 Criar o gráfico
+grafico_prop_idade_br <- ggplot(dados.idade.br.series, aes(x = factor(ANOOBITO), y = porcentagem, fill = categoria_idade,text  = paste("Ano: ", factor(ANOOBITO),
+                                                                                                                                       "<br>Percentual: ",round(porcentagem, 2),"%",
+                                                                                                                                       "<br>Faixa Etária: ", categoria_idade))) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(values =  (paleta_hist(4)))+
+  labs(
+    title = "Proporção de Mortes no Brasil por Idade e Ano",
+    y = "Porcentagem (%)",
+    x = "",
+    fill = "Idade"
+  )+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+```
+
+```{r out.width = "100%", warning = FALSE, echo=FALSE}
+
+subplot(style(ggplotly(grafico_prop_idade_br, tooltip = "text"),
+              showlegend = T)  |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.2 ,
+                                    y = 1.05,
+                                    text = "Mortes Totais BR",
+                                    showarrow = F, 
+                                    xref='paper', 
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(grafico_prop_idade_es, tooltip = "text"), 
+              showlegend = FALSE)  |> 
+          layout(annotations = list(x = 0.6 ,
+                                    y = 1.05,
+                                    text = "Mortes Totais ES",
+                                    showarrow = F,
+                                    xref='paper', 
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))))  |> 
+  layout(title =  'Porcentagem de Mortes Relacionadas por Faixa Etária')
+ 
+subplot(style( ggplotly(grafico_prop_idade_br_psic, tooltip = "text"), showlegend = T)  |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.2 ,
+                                    y = 1.05,
+                                    text = "Mortes Psicoativos BR",
+                                    showarrow = F,
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(grafico_prop_idade_es_psic, tooltip = "text"), showlegend = F)  |> 
+          layout(annotations = list(x = 0.6 ,
+                                    y = 1.05,
+                                    text = "Mortes Psicoativos ES",
+                                    showarrow = F,
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10)))) |>
+  layout(title = '')
+```
+
+<br>
+
+
+# Análise demográfica com ênfase nas CIDs mais comuns
+
+Por uma análise da quantidade de mortes por cada CID 10, descobriu-se que as CID's com maior incidência são:
+
+- **i.** K70 - Óbitos devido a doenças hepáticas causadas pelo uso excessivo de álcool ;\
+- **ii.** F10 - Óbitos devido a transtornos mentais e comportamentais devidos ao uso de álcool;\
+- **iii.** F17 - Óbitos devido a transtornos mentais e comportamentais devidos ao uso de fumo ;\
+
+```{r include=FALSE}
+#criando bases filtradas pelas cidis com maior número de mortos no es
+dados.F10.ES <- subset(dados_es_psic, grepl("^F10[0-9]$", CAUSABAS))
+dados.F17.ES <- subset(dados_es_psic, grepl("^F17[0-9]$", CAUSABAS))
+dados.F10.BR <- subset(dados_br_psic, grepl("^F10[0-9]$", CAUSABAS))
+dados.F17.BR <- subset(dados_br_psic, grepl("^F17[0-9]$", CAUSABAS))
+
+dados.K70.ES <- subset(dados_es_psic, grepl("^K70[0-9]$", CAUSABAS))
+dados.K70.BR <- subset(dados_br_psic, grepl("^K70[0-9]$", CAUSABAS))
+```
+
+## Óbitos X Idade
+
+Analisando os gráficos, nota-se uma similaridade no formato do gráfico para ambas as mortes causadas por álcool.
+
+Ao analisar a quantidade de óbitos pelos três maiores psicoativos, percebe-se que a maior parte das pessoas que morreram pelo uso de álcool ou doenças hepáticas causadas pelo álcool tinham entre 50 e 60 anos, o que altera quando vemos o gráfico de fumo. No Espírito Santo, a maior parte tem mais de 60 anos e não tem uma distribuição
+como os outros, ou seja, a quantidade de mortes por idade varia de uma maneira irregular. No Brasil, a distribuição se parece mais com uma normal, porém
+deslocada para a direita, o que mostra que as pessoas que morrem por
+fumo são mais velhas que as que morrem por álcool.
+
+No gráfico das mortes por doenças hepáticas, nota-se também uma assimetria na cauda para o Espírito Santo, mostrando que a maior concentração de mortes está antes de 55 anos.
+
+### Óbitos x Idade - por doenças hepática causadas pelo consumo excessivo de álcool (K70)
+```{r echo=FALSE, warning=FALSE}
+#1.histograma de mortos x idade por K70 (POR DOENÇAS HEPÁTICAS CAUSADAS PELO ALCOOL )
+#1.1 es
+ hist.K70.es <- ggplot(data = dados.K70.ES, aes(x = IDADE2)) +
+  geom_histogram(binwidth = 4, fill = "#9A3D6A", color = "black", alpha = 0.8) +
+  labs(
+    title = "Óbitos no Espírito Santo (K70)",
+    x = 'Idade',
+    y = "Número de mortos"
+  ) +
+  scale_x_continuous(breaks = seq(0, 100, by = 10)) +
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 12),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+#1.2 br
+hist.K70.br <- ggplot(data = dados.K70.BR, aes(x = IDADE2)) +
+  geom_histogram(binwidth = 4, fill = "#9A3D6A", color = "black", alpha = 0.8) +
+  labs(
+    title = "Óbitos no Brasil (K70)",
+    x = 'Idade',
+    y= "Número de mortos"
+  )+
+  scale_x_continuous(breaks = seq(0, 100, by = 10))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 12),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+# Combine os gráficos lado a lado e adicione um título comum
+(hist.K70.br | hist.K70.es) + 
+  plot_annotation(title = "Óbitos por doenças hepáticas causadas pelo uso excessivo de álcool por Idade")
+```
+
+
+### Óbitos x Idade - por consumo de álcool (F10)
+
+```{r echo=FALSE, warning=FALSE}
+## HISTOGRAMAS PELAS CIDS##
+#1.histograma de mortos x idade por F10 (álcool)
+#1.1 es
+hist.F10.es <- ggplot(data = dados.F10.ES, aes(x = IDADE2)) +
+  geom_histogram(binwidth = 4, fill = "#9A3D6A", color = "black", alpha = 0.8,
+                 )+
+  labs(
+    title = "Óbitos no Espírito Santo (F10)",
+    x = 'Idade',
+    y= "Número de mortos"
+  )+
+  scale_x_continuous(breaks = seq(0, 100, by = 10))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 12),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+#1.2 br
+hist.F10.br <- ggplot(data = dados.F10.BR, aes(x = IDADE2)) +
+  geom_histogram(binwidth = 4, fill = "#9A3D6A", color = "black", alpha = 0.8) +
+  labs(
+    title = "Óbitos no Brasil (F10)",
+    x = 'Idade',
+    y= "Número de mortos"
+  )+
+  scale_x_continuous(breaks = seq(0, 100, by = 10))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 12),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+# Combine os gráficos lado a lado e adicione um título comum
+(hist.F10.br | hist.F10.es) + 
+  plot_annotation(title = "Óbitos por Idade causadas pelo uso de álcool")
+
+```
+
+
+### Óbitos x Idade - por fumo (F17)
+```{r echo=FALSE, warning=FALSE}
+# 2. histograma de mortos x idade de f17 (fumo)
+# 2.1 es
+hist.F17.es <- ggplot(data = dados.F17.ES, aes(x = IDADE2)) +
+  geom_histogram(binwidth = 4, fill = "#9A3D6A", color = "black", alpha = 0.8) +
+  labs(
+    title = "Óbitos no Espírito Santo (F17)",
+    x = 'Idade',
+    y= "Número de mortos"
+  )+
+  scale_x_continuous(breaks = seq(0, 100, by = 10))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 12),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+#2.2 br
+hist.F17.br <- ggplot(data = dados.F17.BR, aes(x = IDADE2)) +
+  geom_histogram(binwidth = 4, fill = "#9A3D6A", color = "black", alpha = 0.8) +
+  labs(
+    title = "Óbitos no Brasil (F17)",
+    x = 'Idade',
+    y= "Número de mortos"
+  )+
+  scale_x_continuous(breaks = seq(0, 100, by = 10))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 12),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+# Combine os gráficos lado a lado e adicione um título comum
+(hist.F17.br | hist.F17.es) + 
+  plot_annotation(title = "Óbitos por Idade causadas pelo Fumo")
+
+```
+
+## Óbitos X Gênero
+
+Com relação ao gênero, é perceptível que, tanto no Brasil quanto no Espírito Santo, o comportamento é similar: homens morrem mais do que mulheres tanto por doenças hepáticas quanto pelo consumo de álcool e fumo. Um dado interessante é o aumento de casos entre 2020 e 2021, que foram os anos da pandemia. No entanto, no gráfico de doenças hepáticas, observa-se uma queda no Espírito Santo nos últimos anos.
+
+### Mortes x Gênero - por doenças hepática causadas pelo consumo excessivo de álcool (K70)
+
+```{r include=FALSE}
+#SERIE
+# quantidade de mortes por genero - POR DOENÇAS HEPÁTICAS CAUSADAS PELO ALCOOL
+# BR
+# montando os dados
+dados.genero.br.K70 <- data.frame(
+  dados.K70.BR %>% group_by(ANOOBITO, SEXO) %>%
+    summarise(N.obitos = n())
+)
+
+# grafico
+series_genero_br_K70 <- ggplot(data = dados.genero.br.K70, aes(x = ANOOBITO, y = N.obitos,
+                                                               colour = SEXO,group = SEXO,
+                                                               text  = paste("Ano: ", ANOOBITO,
+                                                                             "<br>Quantidade: ", N.obitos,
+                                                                             "<br>Sexo: ", SEXO))) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15) +
+  labs(title = "Óbitos no BR - doenças hepáticas causadas pelo uso de álcool por Gênero",
+       x="Anos", y="Número óbtos", colour = "Sexo") +
+  scale_x_continuous(
+    breaks = dados.genero.br.K70$ANOOBITO,
+    labels = dados.genero.br.K70$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 12),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 13), 
+    axis.text.x = element_text(size = 11), 
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+#ES
+# montando os dados
+dados.genero.es.K70 <- data.frame(
+  dados.K70.ES  %>% group_by(ANOOBITO, SEXO) %>%
+    summarise(N.obitos = n())
+)
+
+# grafico
+series_genero_es_K70 <- ggplot(data = dados.genero.es.K70, aes(x = ANOOBITO, y = N.obitos,
+                                                               colour = SEXO,group = SEXO,
+                                                               text  = paste("Ano: ", ANOOBITO,
+                                                                             "<br>Quantidade: ", N.obitos,
+                                                                             "<br>Sexo: ", SEXO))) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15) +
+  labs(title = "Óbitos causados por doenças hepáticas pelo uso de álcool no Brasil por Gênero",
+       x="Anos", y="Número óbtos", colour = "Sexo") +
+  scale_x_continuous(
+    breaks = dados.genero.br.K70$ANOOBITO,
+    labels = dados.genero.br.K70$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 12),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 13), 
+    axis.text.x = element_text(size = 11), # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+
+```
+
+```{r out.width = "100%", echo=FALSE}
+
+subplot(style(ggplotly(series_genero_br_K70, tooltip = "text"),
+              showlegend = F)  |> 
+          layout(annotations = list(x = 0.02 ,
+                                    y = 1,
+                                    text = "Mortes por K70 BR",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(series_genero_es_K70, tooltip = "text"),
+              showlegend = T)   |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.5,
+                                    y = 1,
+                                    text = "Mortes por K70 ES",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+       shareX = T, titleX = F, widths = c(0.5,0.5), margin = c(.02,.04,.04,.02),
+       nrows = 1)  |> layout(title = ("Óbitos por doenças hepáticas causada pelo consumo de Álcool por Gênero"),
+                                      font = list(size = 13))
+
+```
+
+### Mortes x Gênero - por consumo de álcool (F10)
+```{r include=FALSE}
+#3. quantidade de mortes por genero - PELO CONSUMO DE ÁLCOOL (F10)
+# 3.1 BR
+# montando os dados
+dados.genero.br.F10 <- data.frame(
+  dados.F10.BR %>% group_by(ANOOBITO, SEXO) %>%
+    summarise(N.obitos = n())
+)
+# grafico
+series_genero_br_f10 <- ggplot(data = dados.genero.br.F10, aes(x = ANOOBITO, y = N.obitos,
+                                                               colour = SEXO,group = SEXO,
+                                                               text  = paste("Ano: ", ANOOBITO,
+                                                                             "<br>Quantidade: ", N.obitos,
+                                                                             "<br>Sexo: ", SEXO))) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15) +
+  labs(title = "Óbitos causados pelo uso de álcool no Brasil por Gênero",
+       x="Anos", y="Número óbtos", colour = "Sexo") +
+  scale_x_continuous(
+    breaks = dados.genero.br.F10$ANOOBITO,
+    labels = dados.genero.br.F10$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 12),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 13),      # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+# 3.2 ES
+# montando os dados
+dados.genero.es.F10 <- data.frame(
+  dados.F10.ES %>% group_by(ANOOBITO, SEXO) %>%
+    summarise(N.obitos = n())
+)
+# grafico
+series_genero_es_f10 <- ggplot(data = dados.genero.es.F10, aes(x = ANOOBITO, y = N.obitos,
+                                                               colour = SEXO,group = SEXO,
+                                                               text  = paste("Ano: ", ANOOBITO,
+                                                                             "<br>Quantidade: ", N.obitos,
+                                                                             "<br>Sexo: ", SEXO))) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15) +
+  labs(title = "Óbitos causados pelo uso de álcool no Espírito Santo por Gênero",
+       x="Anos", y="Número óbtos", colour = "Sexo") +
+  scale_x_continuous(
+    breaks = dados.genero.es.F10$ANOOBITO,
+    labels = dados.genero.es.F10$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 13),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 13),      # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+```
+
+```{r out.width = "100%", echo=FALSE}
+# ggpubr::ggarrange(series_genero_es_f10, series_genero_br_f10, ncol=2, common.legend = T,
+#                   legend = c("bottom" ),align ="hv", widths = c(1, 1), 
+#           heights = c(1, 1))
+subplot(style(ggplotly(series_genero_br_f10, tooltip = "text"),
+              showlegend = F)  |> 
+          layout(annotations = list(x = 0.02 ,
+                                    y = 1,
+                                    text = "Mortes por F10 BR",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(series_genero_es_f10, tooltip = "text"),
+              showlegend = T)   |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.5,
+                                    y = 1,
+                                    text = "Mortes por F10 ES",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+       shareX = T, titleX = F, widths = c(0.5,0.5), margin = c(.02,.04,.04,.02),
+       nrows = 1)  |> layout(title = ("Óbitos por Consumo de Álcool por Gênero"))
+
+```
+
+### Mortes x Gênero - por fumo (F17)
+```{r include=FALSE}
+# 4. quantidade de mortes por genero - PELO FUMO (F17)
+#4.1 BR
+# montando os dados
+dados.genero.br.F17 <- data.frame(
+  dados.F17.BR %>% group_by(ANOOBITO, SEXO) %>%
+    summarise(N.obitos = n())
+)
+# grafico
+series_genero_br_f17 <- ggplot(data = dados.genero.br.F17, aes(x = ANOOBITO, y = N.obitos,
+                                                               colour = SEXO,group = SEXO,
+                                                               text  = paste("Ano: ", ANOOBITO,
+                                                                             "<br>Quantidade: ", N.obitos,
+                                                                             "<br>Sexo: ", SEXO))) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15) +
+  labs(title = "Número de Óbitos causados pelo fumo no Brasil por Gênero",
+       x="Anos", y="Número óbtos", colour = "Sexo") +
+  scale_x_continuous(
+    breaks = dados.genero.br.F17$ANOOBITO,
+    labels = dados.genero.br.F17$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 13),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 13),      # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+#4.2 ES
+# montando os dados
+dados.genero.es.F17 <- data.frame(
+  dados.F17.ES %>% group_by(ANOOBITO, SEXO) %>%
+    summarise(N.obitos = n())
+)
+# grafico
+series_genero_es_f17 <- ggplot(data = dados.genero.es.F17, aes(x = ANOOBITO, y = N.obitos,
+                                                               colour = SEXO, group = SEXO,
+                                                               text  = paste("Ano: ", ANOOBITO,
+                                                                             "<br>Quantidade: ", N.obitos,
+                                                                             "<br>Sexo: ", SEXO))) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15) +
+  labs(title = "Óbitos causados pelo fumo no Espírito Santo por Gênero",
+       x="Anos", y="Número óbtos", colour = "Sexo") +
+  scale_x_continuous(
+    breaks = dados.genero.es.F17$ANOOBITO,
+    labels = dados.genero.es.F17$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 13),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 13),      # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+```
+
+```{r out.width = "100%", echo=FALSE}
+# ggpubr::ggarrange(series_genero_es_f17, series_genero_br_f17, ncol=2, common.legend = T,
+#                   legend = c("bottom" ),align ="hv", widths = c(1, 1), 
+#           heights = c(1, 1))
+subplot(style(ggplotly(series_genero_br_f17, tooltip = "text"),
+              showlegend = F)  |> 
+          layout(annotations = list(x = 0.02 ,
+                                    y = 1.04,
+                                    text = "Mortes por F17 BR",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(series_genero_es_f17, tooltip = "text"),
+              showlegend = T)   |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.22,
+                                    y = 1.04,
+                                    text = "Mortes por F17 ES",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+       shareX = T, titleX = F, widths = c(0.5,0.5), margin = c(.02,.04,.04,.02),
+       nrows = 1)  |> layout(title = ("Óbitos por Fumo por Gênero"))
+```
+
+## Óbitos X Escolaridade
+
+A variável escolaridade apresenta muitos dados faltantes (NAs), o que dificulta a obtenção de conclusões definitivas. No entanto, em relação ao psicoativo fumo, ao se manter as devidas proporções, observa-se um aumento no número de mortes entre pessoas com menor escolaridade. De maneira geral, para os três psicoativos analisados, as maiores quantidades de óbitos estão concentradas entre aqueles com menor tempo de estudo, especialmente nas faixas de 1 a 3 e de 4 a 5 anos de escolaridade, apenas na variável fumo, notou-se uma alta quantidade também da categoria nenhuma escolaridade.
+
+### Mortes x Escolaridade - por doenças hepática causadas pelo consumo excessivo de álcool (K70)
+```{r include=FALSE}
+#------------ ÓBITOS X ESCOLARIDADE ---------------
+# quantidade de mortes por escolaridade - POR DOENÇAS HEPÁTICAS CAUSADAS PELO ALCOOL (K70)
+# BR
+freq_escolaridade_br_K70 <- dados.K70.BR %>%
+  group_by(ESC) %>%
+  summarise(Quantidade = n(), .groups = "drop") %>%
+  mutate(Porcentagem = Quantidade / sum(Quantidade) * 100)
+
+hist_escolaridade_br_K70 <- ggplot(freq_escolaridade_br_K70, aes(x = ESC, y = Quantidade, fill = ESC)) +
+  geom_bar(stat = "identity",aes(
+    text  = paste("<br>Quantidade: ", Quantidade,
+                  "<br>Escolaridade: ", ESC))) +
+  theme_classic() +
+  labs(
+    title = "Óbitos causados por doenças hepáticas pelo uso de álcool no Brasil por Escolaridade",
+    x = "Escolaridade",
+    y = "Número de Pessoas"
+  ) +
+  theme(
+    plot.title = element_text(size = 12),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text.y = element_text(size = 13),      # Tamanho dos textos dos eixos
+    axis.text.x = element_blank(),              # Removendo o texto do eixo x
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+# ES
+freq_escolaridade_es_K70 <- dados.K70.ES %>%
+  group_by(ESC) %>%
+  summarise(Quantidade = n(), .groups = "drop") %>%
+  mutate(Porcentagem = Quantidade / sum(Quantidade) * 100)
+
+hist_escolaridade_es_K70 <- ggplot(freq_escolaridade_es_K70, aes(x = ESC, y = Quantidade, fill = ESC)) +
+  geom_bar(stat = "identity",aes(
+    text  = paste("<br>Quantidade: ", Quantidade,
+                  "<br>Escolaridade: ", ESC))) +
+  theme_classic() +
+  labs(
+    title = "Óbitos causados por doenças hepáticas pelo uso de álcool no ES por Escolaridade",
+    x = "Escolaridade",
+    y = "Número de Pessoas"
+  ) +
+  theme(
+    plot.title = element_text(size = 11),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text.y = element_text(size = 13),      # Tamanho dos textos dos eixos
+    axis.text.x = element_blank(),              # Removendo o texto do eixo x
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+```
+
+```{r out.width = "100%", echo=FALSE}
+
+subplot(style(ggplotly(hist_escolaridade_br_K70, tooltip = "text"),
+              showlegend = F)  |> 
+          layout(annotations = list(x = 0.02 ,
+                                    y = 1.04,
+                                    text = "Mortes por K70 BR",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(hist_escolaridade_es_K70, tooltip = "text"),
+              showlegend = T)   |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.22,
+                                    y = 1.04,
+                                    text = "Mortes por K70 ES",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+       shareX = T, titleX = F, widths = c(0.5,0.5), margin = c(.02,.04,.04,.02),
+       nrows = 1)  |> layout(title = ("Óbitos por doenças hepáticas causada pelo consumo de Álcool por Escolaridade"),
+                                      font = list(size = 13))
+```
+
+```{r include=FALSE}
+#------------ ÓBITOS X ESCOLARIDADE ---------------
+#5. quantidade de mortes por escolaridade - PELO CONSUMO DE ÁLCOOL (F10)
+# 5.1 BR
+freq_escolaridade_br_f10 <- dados.F10.BR %>%
+  group_by(ESC) %>%
+  summarise(Quantidade = n(), .groups = "drop") %>%
+  mutate(Porcentagem = Quantidade / sum(Quantidade) * 100)
+
+hist_escolaridade_br_f10 <- ggplot(freq_escolaridade_br_f10, aes(x = ESC, y = Quantidade, fill = ESC)) +
+  geom_bar(stat = "identity",aes(
+    text  = paste("<br>Quantidade: ", Quantidade,
+                  "<br>Escolaridade: ", ESC))) +
+  theme_classic() +
+  labs(
+    title = "Óbitos pelo consumo de álcool no Brasil por Escolaridade",
+    x = "Escolaridade",
+    y = "Número de Pessoas"
+  ) +
+  theme(
+    plot.title = element_text(size = 13),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text.y = element_text(size = 13),      # Tamanho dos textos dos eixos
+    axis.text.x = element_blank(),              # Removendo o texto do eixo x
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+#5.2 ES
+
+freq_escolaridade_es_f10 <- dados.F10.ES %>%
+  group_by(ESC) %>%
+  summarise(Quantidade = n(), .groups = "drop") %>%
+  mutate(Porcentagem = Quantidade / sum(Quantidade) * 100)
+
+hist_escolaridade_es_f10 <- ggplot(freq_escolaridade_es_f10, aes(x = ESC, y = Quantidade, fill = ESC)) +
+  geom_bar(stat = "identity",aes(
+    text  = paste("<br>Quantidade: ", Quantidade,
+                  "<br>Escolaridade: ", ESC))) +
+  theme_classic() +
+  labs(title = "Óbitos pelo consumo de álcool no ES por Escolaridade",
+       x = "Escolaridade",
+       y = "Número de Pessoas")+
+  theme(
+    plot.title = element_text(size = 13),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text.y = element_text(size = 13),      # Tamanho dos textos dos eixos
+    axis.text.x = element_blank(),              # Removendo o texto do eixo x
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+# 6. quantidade de mortes por escolaridade - PELO FUMO(F17)
+#6.1 BR
+freq_escolaridade_br_f17 <- dados.F17.BR %>%
+  group_by(ESC) %>%
+  summarise(Quantidade = n(), .groups = "drop") %>%
+  mutate(Porcentagem = Quantidade / sum(Quantidade) * 100)
+
+hist_escolaridade_br_f17 <- ggplot(freq_escolaridade_br_f17, aes(x = ESC, y = Quantidade, fill = ESC)) +
+  geom_bar(stat = "identity",aes(
+    text  = paste("<br>Quantidade: ", Quantidade,
+                  "<br>Escolaridade: ", ESC))) +
+  theme_classic() +
+  labs(
+    title = "Óbitos pelo fumo no Brasil por Escolaridade",
+    x = "Escolaridade",
+    y = "Número de Pessoas"
+  ) +
+  theme(
+    plot.title = element_text(size = 14),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text.y = element_text(size = 13),      # Tamanho dos textos dos eixos
+    axis.text.x = element_blank(),              # Removendo o texto do eixo x
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+#6.2 ES
+
+freq_escolaridade_es_f17 <- dados.F17.ES %>%
+  group_by(ESC) %>%
+  summarise(Quantidade = n(), .groups = "drop") %>%
+  mutate(Porcentagem = Quantidade / sum(Quantidade) * 100)
+
+hist_escolaridade_es_f17 <- ggplot(freq_escolaridade_es_f17, aes(x = ESC, y = Quantidade, fill = ESC)) +
+  geom_bar(stat = "identity",aes(
+    text  = paste("<br>Quantidade: ", Quantidade,
+                  "<br>Escolaridade: ", ESC))) +
+  theme_classic() +
+  labs(title = "Óbitos pelo fumo no ES por Escolaridade",
+       x = "Escolaridade",
+       y = "Número de Pessoas")+
+  theme(
+    plot.title = element_text(size = 14),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text.y = element_text(size = 13),      # Tamanho dos textos dos eixos
+    axis.text.x = element_blank(),              # Removendo o texto do eixo x
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+```
+
+### Mortes x Escolaridade - por consumo de álcool (F10)
+
+```{r out.width = "100%", echo=FALSE}
+# ggpubr::ggarrange(hist_escolaridade_es_f10, hist_escolaridade_br_f10, ncol=2, common.legend = T,
+#                   legend = c("bottom" ),align ="hv", widths = c(1, 1), 
+#           heights = c(1, 1))
+
+subplot(style(ggplotly(hist_escolaridade_br_f10, tooltip = "text"),
+              showlegend = F)  |> 
+          layout(annotations = list(x = 0.02 ,
+                                    y = 1.04,
+                                    text = "Mortes por F10 BR",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(hist_escolaridade_es_f10, tooltip = "text"),
+              showlegend = T)   |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.22,
+                                    y = 1.04,
+                                    text = "Mortes por F10 ES",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+       shareX = T, titleX = F, widths = c(0.5,0.5), margin = c(.02,.04,.04,.02),
+       nrows = 1)  |> layout(title = "Óbitos por Consumo de Álcool por Escolaridade")
+```
+
+### Mortes x Escolaridade - por fumo (F17)
+
+```{r out.width = "100%", echo=FALSE}
+# ggpubr::ggarrange(hist_escolaridade_es_f17, hist_escolaridade_br_f17, ncol=2, common.legend = T,
+#                   legend = c("bottom" ),align ="hv", widths = c(1, 1), 
+#           heights = c(1, 1))
+subplot(style(ggplotly(hist_escolaridade_br_f17, tooltip = "text"),
+              showlegend = F)  |> 
+          layout(annotations = list(x = 0.02 ,
+                                    y = 1.04,
+                                    text = "Mortes por F17 BR",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(hist_escolaridade_es_f17),
+              showlegend = T)   |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.22,
+                                    y = 1.04,
+                                    text = "Mortes por F17 ES",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+       shareX = T, titleX = F, widths = c(0.5,0.5), margin = c(.02,.04,.04,.02),
+       nrows = 1)  |> layout(title = "Óbitos por Fumo por Escolaridade")
+
+```
+
+## Óbitos X Raça
+
+```{r include=FALSE}
+#------------ ÓBITOS X raça ---------------
+#7 quantidade de mortes por raca - PELO CONSUMO DE ALCOOL (F10)
+#7.1 BR
+# montando os dados
+dados.raca.br.f10 <- data.frame(
+  dados.F10.BR %>% group_by(ANOOBITO, RACACOR) %>%
+    summarise(N.obitos = n())
+)
+# grafico
+series_raca_br_F10 <- ggplot(data = dados.raca.br.f10, aes(x = ANOOBITO, y = N.obitos,
+                                                           colour = RACACOR)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = RACACOR,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Raça/Cor: ", RACACOR))) +
+  labs(title ="Óbitos pelo consumo de álcool no Brasil por Raça",
+       x="Anos", y="Óbitos Totais", colour = "Raça") +
+  scale_x_continuous(
+    breaks = dados.raca.br.f10$ANOOBITO,
+    labels = dados.raca.br.f10$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),      # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+# montando os dados
+dados.raca.es.f10 <- data.frame(
+  dados.F10.ES %>% group_by(ANOOBITO, RACACOR) %>%
+    summarise(N.obitos = n())
+)
+# grafico
+series_raca_es_F10 <- ggplot(data = dados.raca.es.f10, aes(x = ANOOBITO, y = N.obitos,
+                                                           colour = RACACOR)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = RACACOR,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Raça/Cor: ", RACACOR))) +
+  labs(title = "Óbitos pelo consumo de álcool no Espírito Santo por Raça",
+       x="Anos", y="Óbitos Totais", colour = "Raça") +
+  scale_x_continuous(
+    breaks = dados.raca.es.f10$ANOOBITO,
+    labels = dados.raca.es.f10$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),      # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+# 8. quantidade de mortes por raca - PELO FUMO (F17)
+#8.1 BR
+# montando os dados
+dados.raca.br.f17 <- data.frame(
+  dados.F17.BR %>% group_by(ANOOBITO, RACACOR) %>%
+    summarise(N.obitos = n())
+)
+# grafico
+series_raca_br_F17 <- ggplot(data = dados.raca.br.f17, aes(x = ANOOBITO, y = N.obitos,
+                                                           colour = RACACOR)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = RACACOR,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Raça/Cor: ", RACACOR))) +
+  labs(title = "Óbitos pelo fumo no Brasil por Raça",
+       x="Anos", y="Óbitos Totais", colour = "Raça") +
+  scale_x_continuous(
+    breaks = dados.raca.br.f17$ANOOBITO,
+    labels = dados.raca.br.f17$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),      # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+# 8.2 ES
+# montando os dados
+dados.raca.es.f17 <- data.frame(
+  dados.F17.ES %>% group_by(ANOOBITO, RACACOR) %>%
+    summarise(N.obitos = n())
+)
+# grafico
+series_raca_es_F17 <- ggplot(data = dados.raca.es.f17, aes(x = ANOOBITO, y = N.obitos,
+                                                           colour = RACACOR)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = RACACOR,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Raça/Cor: ", RACACOR))) +
+  labs(title = "Óbitos pelo fumo no Espírito Santo por Raça",
+       x="Anos", y="Óbitos Totais", colour = "Raça") +
+  scale_x_continuous(
+    breaks = dados.raca.es.f17$ANOOBITO,
+    labels = dados.raca.es.f17$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),      # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+```
+
+Independente do psicoativo, os três seguem o mesmo padrão, pessoas pardas
+morrem mais, seguidas por brancas. Apenas no fumo no Brasil a distribuição altera um pouco, tendo alterações brutas ao longo dos anos e com brancos morrendo mais em 2022. 
+
+### Mortes x Raça - por doenças hepática causadas pelo consumo excessivo de álcool (K70)
+
+```{r include=FALSE}
+#------------ ÓBITOS X raça ---------------
+#SERIE
+
+#quantidade de mortes por raca - POR DOENÇAS HEPÁTICAS CAUSADAS PELO ALCOOL (K70)
+#BR
+# montando os dados
+dados.raca.br.K70 <- data.frame(
+  dados.K70.BR %>% group_by(ANOOBITO, RACACOR) %>%
+    summarise(N.obitos = n())
+)
+# grafico
+series_raca_br_K70 <- ggplot(data = dados.raca.br.K70, aes(x = ANOOBITO, y = N.obitos,
+                                                           colour = RACACOR)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = RACACOR,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Raça/Cor: ", RACACOR))) +
+  labs(title ="Óbitos causados por doenças hepáticas pelo uso de álcool no BR por raça",
+       x="Anos", y="Óbitos Totais", colour = "Raça") +
+  scale_x_continuous(
+    breaks = dados.raca.br.K70$ANOOBITO,
+    labels = dados.raca.br.K70$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 11),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),      # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+#ES
+# montando os dados
+dados.raca.es.K70 <- data.frame(
+  dados.K70.ES %>% group_by(ANOOBITO, RACACOR) %>%
+    summarise(N.obitos = n())
+)
+
+# grafico
+series_raca_es_K70 <- ggplot(data = dados.raca.es.K70, aes(x = ANOOBITO, y = N.obitos,
+                                                           colour = RACACOR)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = RACACOR,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Raça/Cor: ", RACACOR))) +
+  labs(title ="Óbitos causados por doenças hepáticas pelo uso de álcool no ES por raça",
+       x="Anos", y="Óbitos Totais", colour = "Raça") +
+  scale_x_continuous(
+    breaks = dados.raca.es.K70$ANOOBITO,
+    labels = dados.raca.es.K70$ANOOBITO)+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 11),       # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),       # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),      # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))
+
+```
+
+```{r out.width = "100%", echo=FALSE}
+
+subplot(style(ggplotly(series_raca_br_K70, tooltip = "text"),
+              showlegend = F)  |> 
+          layout(annotations = list(x = 0.02 ,
+                                    y = 1.04,
+                                    text = "Mortes por K70 BR",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(series_raca_es_K70),
+              showlegend = T)   |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.22,
+                                    y = 1.04,
+                                    text = "Mortes por K70 ES",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+       shareX = T, titleX = F, widths = c(0.5,0.5), margin = c(.02,.04,.04,.02),
+       nrows = 1)  |> layout(title = ("Óbitos por doenças hepáticas causada pelo consumo de Álcool por Raça/Cor"),
+                                      font = list(size = 13))
+```
+
+### Mortes x Raça - por consumo de álcool (F10)
+
+```{r out.width = "100%", echo=FALSE}
+# ggpubr::ggarrange(series_raca_es_F10, series_raca_br_F10, ncol=2, common.legend = T,
+#                   legend = c("bottom" ),align ="hv", widths = c(1, 1), 
+#           heights = c(1, 1))
+
+subplot(style(ggplotly(series_raca_br_F10, tooltip = "text"),
+              showlegend = F)  |> 
+          layout(annotations = list(x = 0.02 ,
+                                    y = 1.04,
+                                    text = "Mortes por F10 BR",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(series_raca_es_F10),
+              showlegend = T)   |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.22,
+                                    y = 1.04,
+                                    text = "Mortes por F10 ES",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+       shareX = T, titleX = F, widths = c(0.5,0.5), margin = c(.02,.04,.04,.02),
+       nrows = 1)  |> layout(title = "Óbitos por Consumo de Álcool por Raça/Cor")
+```
+
+### Mortes x Raça - por Fumo (F17)
+
+```{r out.width = "100%", echo=FALSE}
+# ggpubr::ggarrange(series_raca_es_F17, series_raca_br_F17, ncol=2, common.legend = T,
+#                   legend = c("bottom" ),align ="hv", widths = c(1, 1), 
+#           heights = c(1, 1))
+subplot(style(ggplotly(series_raca_br_F17, tooltip = "text"),
+              showlegend = F)  |> 
+          layout(annotations = list(x = 0.02 ,
+                                    y = 1.04,
+                                    text = "Mortes por F17 BR",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+        style(ggplotly(series_raca_es_F17),
+              showlegend = T)   |> 
+          layout(legend = list(orientation = "h",
+                               xanchor = "center",
+                               x = 0.5),
+                 annotations = list(x = 0.22,
+                                    y = 1.04,
+                                    text = "Mortes por F17 ES",
+                                    showarrow = F, 
+                                    xref='paper',
+                                    yref='paper'),
+                 xaxis = list(tickfont = list(size = 10)),
+                 yaxis = list(tickfont = list(size = 10))),
+       shareX = T, titleX = F, widths = c(0.5,0.5), margin = c(.02,.04,.04,.02),
+       nrows = 1)  |> layout(title = "Óbitos por Fumo por Raça/Cor")
+```
+
+# Conclusão
+
+Quando analisadas as mortes por questões sociodemográficas, nota-se que para algumas variáveis ocorre um número elevado de dados faltantes que podem comprometer o resultado da análise, como por exemplo as variáveis estado civil e escolaridade. 
+Em relação à variável estado civil, o que pôde ser extraído é que quando fala-se de mortes causadas pelo uso de psicoativos, nota-se que solteiros morrem mais, porém, devido à natureza pessoal e as categorias dessa variável, é possível que essa não seja uma variável de grande relevância para a análise.
+
+É interessante notar que a média de idade de quem morreu devido ao uso de psicoativos é mais baixa que a média de idade das mortes no geral, isso ocorre tanto para o Brasil quanto para o Espírito Santo.
+
+Nas CIDs com maior quantidade de casos, percebe-se que as duas primeiras têm a ver com o consumo de Álcool, que é uma das únicas drogas lícitas. 
+Ainda sobre os óbitos nas CIDs mais frequentes, é perceptível que homens morrem mais que as mulheres, principalmente devido ao consumo de álcool, e que a baixa escolaridade pode ser associada às mortes por psicoativos.
+
+#  Referências Bibliográficas
+
+SALDANHA, Raphael de Freitas; BASTOS, Ronaldo Rocha; BARCELLOS,
+Christovam. Microdatasus: pacote para download e pré-processamento de
+microdados do Departamento de Informática do SUS (DATASUS). Cad. Saúde
+Pública, Rio de Janeiro , v. 35, n. 9, e00032419, 2019. Available from
+<https://doi.org/10.1590/0102-311x00032419> \\
+
+SIM. Sistema de Informação sobre Mortalidade. Departamento de
+Informática do Sistema Único de Saúde (DATASUS). Registros das
+declarações de óbito à partir de 1996, tratados e enriquecidos. In:
+Plataforma de Ciência de Dados aplicada à Saúde (PCDaS). Disponível em:
+<https://pcdas.icict.fiocruz.br>. DOI:
+<https://doi.org/10.7303/syn26343262>, 2021. \\
+
+MEDICINA NET. Classificação Internacional de Doenças (CID-10) - Capítulo
+F. MedicinaNET. Disponível em:
+<https://www.medicinanet.com.br/cid10/f.htm>. Acesso em: 15 jul. 2024.\\
+
+INSTITUTO JONES DOS SANTOS NEVES. Nota Técnica 18: Análise Econômica do
+Estado do Espírito Santo. Vitória: IJSN, 2024. Disponível em:
+<https://ijsn.es.gov.br/Media/IJSN/PublicacoesAnexos/notatecnica/ijsn_nt18.pdf>.
+Acesso em: 15 jul. 2024.
