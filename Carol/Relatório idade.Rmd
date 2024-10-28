@@ -1,0 +1,1194 @@
+---
+title: "Análise de consistência variável idade"
+author: "Caroline de Oliveira Costa"
+date: "`r Sys.Date()`"
+output: html_document
+
+---
+
+```{r include=FALSE}
+#paletas de bibliotecas
+#bibliotecas
+
+pacman::p_load("tidyverse", "janitor", "Hmisc",
+               "summarytools", "DataExplorer", 
+               "knitr","readr", "dplyr", "glue", "scales",
+               "geobr", "sf", "latex2exp", "patchwork", 
+               "reshape2", "sidrar", "ggstatsplot")
+library(readr)
+library(plotly)
+library(dplyr)
+library(data.table)
+library(lubridate)
+library(ggplot2)
+library(RColorBrewer)
+library(reactR)
+library(htmltools)
+library(reactable)
+library(stringr)
+library(sidrar)
+library(janitor)
+library(readxl)
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+library(latex2exp)
+library(geobr)
+library(scales)
+# paleta de series === CORES VIVAS (primárias) POIS AS LINHAS SÃO FINAS
+
+
+paleta_series <- manual_pal(c("#010440","#ff7f00","#1e96fc", "#ff6392", 
+                              "#009D00","#9381ff" ,"#e31a1c", "#25a18e"
+                        ))
+#TAMANHO DO TEXTO DA LEGENDA
+size_titulo_legenda <- 12
+size_texto_legenda <- 10
+
+```
+
+## Introdução
+
+ A análise de consistência visa verificar se diferentes métodos para calcular uma variável produzem resultados coerentes e confiáveis. Neste caso, será comparado duas formas de se calcular a variável idade, utilizando os dados de mortalidade do SIM (Sistema de Informação sobre Mortalidade) para óbitos ocorridos entre 2013 e 2022.
+
+Esta análise é crucial para garantir a qualidade dos dados e a precisão das análises subsequentes. Discrepâncias entre os métodos podem indicar a necessidade de revisar a metodologia ou ajustar o cálculo da variável.
+
+Para isso, será criada duas variáveis para representar a idade de formas diferentes:
+
+IDADE2: Calculada como a diferença entre a data de óbito (DTOBITO) e a data de nascimento (DTNASC).\
+IDADE3: Obtida a partir da variável idade (IDADE) fornecida pelos dados do SIM.
+
+## Variável IDADE do SIM
+
+A variável IDADE do SIM  é composta por dois subcampos que indicam a unidade de medida da idade e a quantidade dessa unidade.
+
+### Estrutura da variável:
+- **Primeiro subcampo**: Um dígito que indica a unidade da idade.
+- **Segundo subcampo**: Dois dígitos que indicam a quantidade de unidades.
+
+### Detalhamento dos subcampos:
+
+- **Unidade da Idade** (Primeiro subcampo):
+  - `1`: Minuto.
+  - `2`: Hora.
+  - `3`: Mês.
+  - `4`: Ano.
+  - `5`: Idades maiores que 100 anos.
+  - `9`: Ignorado.
+
+- **Quantidade de Unidades** (Segundo subcampo):
+  - **Menos de 1 hora**: O subcampo varia de `01` a `59` (minutos).
+  - **De 1 a 23 horas**: O subcampo varia de `01` a `23` (horas).
+  - **De 24 horas a 29 dias**: O subcampo varia de `01` a `29` (dias).
+  - **De 1 a menos de 12 meses completos**: O subcampo varia de `01` a `11` (meses).
+  - **Anos completos**: O subcampo varia de `00` a `99`.
+
+
+Como o trabalho é referente à mortalidade causada por psicoativos, será usado as idades em anos completos, ou seja, todas as observações que tiverem o primeiro dígito como 1, 2 ou 3, será considerado idade 0, quando 4 e 5, será o valor numérico inteiro da idade e caso seja 9, será inserido NA.
+ 
+
+## Variáveis utilizadas 
+
+
+- **CAUSABAS**: Código da CID-10 utilizado para informar a causa da morte.
+- **Sigla**: Sigla do estado onde ocorreu o óbito.
+- **DTNASC**: Data de nascimento do falecido.
+- **DTOBITO**: Data do óbito do falecido.
+- **ANOOBITO**: Ano do óbito.
+- **IDADE**: Idade do falecido conforme registrada no Sistema de Informação sobre Mortalidade (SIM).
+- **IDADE2**: Idade calculada com base na diferença entre a data de óbito (DTOBITO) e a data de nascimento (DTNASC).
+- **IDADE3**: Idade calculada com base na variável de idade disponibilizada no SIM.
+
+
+```{r include=FALSE}
+#leitura do banco de dados br total, acrescentando colunas idades
+idade_br_total <- readRDS("idade_br_total.rds")
+
+
+```
+
+## Análise da idade no Brasil.
+
+
+Observou-se primeiro a quantidade de observações diferentes entre as duas formas de criar a variável idade (IDADE2 , IDADE3), considerando os seguintes critérios:
+
+- **Total de linhas**: Número total de linhas na base de dados.
+- **Linhas iguais**: Número total de linhas em que as duas formas de calcular a idade são iguais.
+- **Linhas numéricas diferentes**: Número de linhas em que há apenas números e eles são diferentes entre si.
+- **Linhas diferentes com NA**: Número de linhas onde uma coluna é NA e a outra é numérica.
+- **Linhas diferentes total**: Soma do número de linhas numéricas diferentes e linhas diferentes com NA.
+
+
+
+```{r echo=FALSE}
+################ Tabela quantidade por ano ########################
+# Função para criar a tabela de comparação para todos os anos com uma linha de total
+gerar_tabela_comparacao <- function(dados) {
+  # Obter todos os anos únicos no dataframe
+  anos <- unique(dados$ANOOBITO)
+  
+  # Criar uma lista para armazenar os resultados
+  resultados <- list()
+  
+  # Iterar sobre cada ano e calcular os valores
+  for (ano in anos) {
+    obitos_ano <- subset(dados, ANOOBITO == ano)
+    
+    n_linhas <- nrow(obitos_ano)
+    df_iguais <- subset(obitos_ano, (IDADE2 == IDADE3) | (is.na(IDADE2) & is.na(IDADE3)))
+    numero_linhas_iguais <- nrow(df_iguais)
+    
+    df_diferentes_valores <- subset(obitos_ano, IDADE2 != IDADE3 & !is.na(IDADE2) & !is.na(IDADE3))
+    numero_diferentes_valores <- nrow(df_diferentes_valores)
+    
+    df_diferentes_na <- subset(obitos_ano, is.na(IDADE2) != is.na(IDADE3))
+    numero_diferentes_na <- nrow(df_diferentes_na)
+    
+    soma_diferentes <- numero_diferentes_valores + numero_diferentes_na
+    
+    # Calcular a porcentagem de linhas iguais
+    porcentagem_iguais <- (numero_linhas_iguais / n_linhas) * 100
+    
+    # Adicionar os resultados à lista (sem formatação da porcentagem)
+    resultados[[as.character(ano)]] <- c(n_linhas, numero_linhas_iguais,porcentagem_iguais, numero_diferentes_valores, numero_diferentes_na, soma_diferentes)
+  }
+  
+  # Converter a lista em um dataframe
+  tabela_resultados <- do.call(cbind, resultados)
+  tabela_resultados <- as.data.frame(t(tabela_resultados))
+  
+  # Adicionar os nomes das colunas
+  colnames(tabela_resultados) <- c("Total de linhas", "Linhas iguais", "Porcentagem de Linhas Iguais (%)","Linhas numéricas diferentes", "Linhas diferentes com NA", "Linhas diferentes Total" )
+  
+  # Calcular os totais de cada coluna (exceto a porcentagem)
+  linha_total <- colSums(tabela_resultados[, c(1, 2, 4, 5, 6)])
+  
+  # Calcular a porcentagem total e formatar com o símbolo de %
+  porcentagem_total <- (linha_total["Linhas iguais"] / linha_total["Total de linhas"]) * 100
+  linha_total <- c(linha_total[1:2], porcentagem_total, linha_total[3:5])
+  
+  # Adicionar a linha de total ao dataframe
+  tabela_resultados <- rbind(tabela_resultados, "Total" = linha_total)
+  
+  # Converter a coluna de porcentagem para string com o símbolo de %
+  tabela_resultados$`Porcentagem de Linhas Iguais (%)` <- paste0(round(as.numeric(tabela_resultados$`Porcentagem de Linhas Iguais (%)`), 2), "%")
+  
+  # Retornar a tabela formatada
+  return(kable(tabela_resultados, align = "c", caption = "Tabela de comparação"))
+}
+
+# Exemplo de uso da função
+gerar_tabela_comparacao(idade_br_total)
+
+
+
+```
+
+
+
+```{r echo=FALSE}
+# Contar o número de NAs em cada coluna
+na_counts <- sapply(idade_br_total, function(col) sum(is.na(col)))
+
+# Obter o total de linhas no dataframe
+total_linhas <- nrow(idade_br_total)
+
+# Calcular a porcentagem de NAs em cada coluna
+percent_na <- (na_counts / total_linhas) * 100
+
+# Criando uma tabela com os resultados
+tabela_na <- data.frame(
+  Quantidade_NA = na_counts,
+  Porcentagem_NA = paste0(round(percent_na, 2), "%")  # Formatar a porcentagem com duas casas decimais e o símbolo de %
+)
+
+# Exibindo a tabela
+kable(tabela_na, col.names = c("Quantidade de NA", "Porcentagem (%)"), align = "c", caption = "Quantidade de valores faltantes no dataset Brasil")
+
+```
+
+Tabela contruída com base na quantidade de linhas com dados faltantes (NA) para cada variável do dataframe e a porcentagem da quantidade de NA em relação ao total de linhas.
+
+```{r echo=FALSE}
+# Supondo que a coluna 'IDADE' contém números de 3 dígitos
+# Extrair o primeiro dígito (unidade) e contar a quantidade de cada unidade
+idade_br_total$UnidadeIdade <- as.numeric(substr(idade_br_total$IDADE, 1, 1))  # Primeiro dígito
+idade_br_total$QuantidadeUnidades <- as.numeric(substr(idade_br_total$IDADE, 2, 3))  # Últimos dois dígitos
+
+# Criar a tabela de contagem diretamente a partir da coluna IDADE
+tabela_contagem <- table(idade_br_total$UnidadeIdade)
+
+# Contar valores NA
+quantidade_na <- sum(is.na(idade_br_total$IDADE))
+
+# Transformar a tabela em dataframe
+tabela_final <- as.data.frame(tabela_contagem)
+
+# Renomear as colunas
+colnames(tabela_final) <- c("Categoria", "Quantidade")
+
+# Criar um dataframe com as colunas no formato desejado
+tabela_formatada <- as.data.frame(t(tabela_final$Quantidade))  # Transpor a tabela de quantidade
+colnames(tabela_formatada) <- as.character(tabela_final$Categoria)  # Usar as categorias como nomes das colunas
+
+# Adicionar colunas para Total e NA
+tabela_formatada <- rbind(tabela_formatada)
+
+# Ajustar o dataframe para que o Total e NA sejam colunas
+tabela_formatada <- as.data.frame(cbind(tabela_formatada, Total = sum(tabela_final$Quantidade), "NA" = quantidade_na))
+
+# Exibir a tabela
+kable(tabela_formatada, align = "c", caption = "Quantidade de valores por unidade da IDADE")
+
+
+
+
+```
+A tabela "Quantidade de valores por unidade da IDADE" indica a quantidade de observações, presentes na variável original do SIM, de cada unidade de idade, ou seja do primeiro subcampo da variável.
+Nessa tabela, o total indica a quantidade de valores numéricos. 
+
+
+```{r echo=FALSE, warning=FALSE}
+#SABER QUANTIDDAE DE VALORES NEGATIVOS 
+# Contar quantos valores da coluna IDADE2 são menores que 0
+quantidade_abaixo_zero <- sum(idade_br_total$IDADE2 < 0, na.rm = TRUE)
+
+
+# Contar quantos valores da coluna IDADE3 são menores que 0
+quantidade_abaixo_zero_idadeeanos <- sum(idade_br_total$IDADE3 < 0, na.rm = TRUE)
+
+
+# Criando uma tabela com os resultados
+tabela_valores_negativos <- data.frame(
+  Variáveis = c("IDADE2", "IDADE3"),
+  Quantidade = c(quantidade_abaixo_zero, quantidade_abaixo_zero_idadeeanos)
+)
+
+# Exibindo a tabela
+kable(tabela_valores_negativos, col.names = c("Variáveis", "Quantidade "), align = "c", caption = "Quantidade valores negativos no Brasil")
+```
+
+
+Como pode-se ver, a presença maior de NA é na variável IDADE3 (0.41%), que pode ser devido ao número elevado de observações faltantes (NA), ou dados errados na variável IDADE.  Já os altos valores de dados faltantes na variável IDADE2 se deve ao fato do alto número de NA nas datas de nascimento e é nessa variável que tem também a presença de quatro valores negativos, -1, -1, -4 e -3171, seus respectivos valores na variável IDADE3 são 0, 71, 90 e 86.
+
+Precisa-se resolver esses valores diferentes e, portanto, primeiro  observou-se de forma gráfica o que isso impacta nas análises.
+ 
+
+### Histogramas
+
+```{r echo=FALSE}
+#Histogramas Brasil
+par(mfrow = c(1, 2))
+
+idade_br_total_filtrada <- idade_br_total[idade_br_total$IDADE2 >= 0, ]
+hist_idade2_br <-hist(idade_br_total_filtrada$IDADE2, 
+     main = paste("Histograma IDADE2 BR"),
+     xlab = 'Idade', ylab = 'Número de mortos')
+
+
+hist_IDADE3_br <- hist(idade_br_total$IDADE3, 
+     main = paste("Histograma IDADE3 BR"),
+     xlab = 'Idade', ylab = 'Número de mortos')
+
+
+```
+
+### Boxplots
+```{r echo=FALSE}
+# BOXPLOT BRASIL
+par(mfrow = c(1, 2))
+#IDADE2
+# Criar um boxplot da variável IDADE2
+idade_br_total_filtrada <- idade_br_total[idade_br_total$IDADE2 >= -4, ]
+
+boxplot_idade2_br <- boxplot(idade_br_total_filtrada$IDADE2, 
+        main = "Boxplot da IDADE2 BR >= - 4", 
+        ylab = "Idade") 
+
+
+#IDADE3
+boxplot_IDADE3_br <- boxplot(idade_br_total$IDADE3, 
+        main = "Boxplot da IDADE3 BR", 
+        ylab = "Idade") 
+
+
+```
+
+Para a confecção dos boxplot, vale informar que para a variável IDADE2, foi ignorado o outlier negativo, -3171, para não desconfigurar o gráfico.
+
+```{r echo=FALSE}
+# Obter o resumo estatístico das duas colunas
+summary_idade2 <- summary(idade_br_total$IDADE2)
+summary_IDADE3 <- summary(idade_br_total$IDADE3)
+
+# Criar uma tabela com os resultados
+tabela_summary <- data.frame(
+  Estatística = names(summary_idade2),
+  IDADE2 = as.integer(summary_idade2),
+  IDADE3 = as.integer(summary_IDADE3)
+)
+
+# Exibir a tabela
+kable(tabela_summary, col.names = c("Estatística", "IDADE2", "IDADE3"), align = "c",caption = "Table BR")
+```
+
+Apesar da diferença de NA's e os outliers negativos, é possível notar que a parte descritiva não apresenta grandes divergências entre uma variável e outra.
+
+Após observar graficamente as diferenças das informações de idade, nota-se que em nenhum momento houve uma grande alteração das imagens, isso pode ocorrer devido ao fato de que a maior parte das informações são iguais, portanto, não altera significativamente as informações passadas.
+
+Nota-se entre os gráficos apresentados uma alteração mínima, isso mostra que, visualmente, a escolha da forma de criação da variável não impacta tanto o resultado.
+
+
+## Análise de idades para o Espírito Santo
+
+```{r ,include=FALSE, include=FALSE}
+
+# Filtrar novamente
+idade_es_total <- idade_br_total %>%
+  filter(Sigla == "ES")
+
+```
+
+```{r, echo=FALSE}
+################ Tabela quantidade por ano ########################
+gerar_tabela_comparacao(idade_es_total)
+
+```
+
+Essa tabela mostra que os valores diferentes são devido  à  NA's, ou seja, uma coluna tem NA enquanto a observação referente a ela na outra coluna é numérica.
+
+```{r echo=FALSE}
+# Contar o número de NAs em cada coluna
+na_counts <- sapply(idade_es_total, function(col) sum(is.na(col)))
+
+# Obter o total de linhas no dataframe
+total_linhas <- nrow(idade_es_total)
+
+# Calcular a porcentagem de NAs em cada coluna
+percent_na <- (na_counts / total_linhas) * 100
+
+# Criando uma tabela com os resultados
+tabela_na <- data.frame(
+  Quantidade_NA = na_counts,
+  Porcentagem_NA = paste0(round(percent_na, 2), "%")  # Formatar a porcentagem com duas casas decimais e o símbolo de %
+)
+
+# Exibindo a tabela
+kable(tabela_na, col.names = c("Quantidade de NA", "Porcentagem (%)"), align = "c", caption = "Quantidade de valores faltantes no dataset Espírito Santo")
+
+```
+
+
+```{r echo=FALSE}
+# Supondo que a coluna 'IDADE' contém números de 3 dígitos
+# Extrair o primeiro dígito (unidade) e contar a quantidade de cada unidade
+idade_es_total$UnidadeIdade <- as.numeric(substr(idade_es_total$IDADE, 1, 1))  # Primeiro dígito
+idade_es_total$QuantidadeUnidades <- as.numeric(substr(idade_es_total$IDADE, 2, 3))  # Últimos dois dígitos
+
+# Criar a tabela de contagem diretamente a partir da coluna IDADE
+tabela_contagem <- table(idade_es_total$UnidadeIdade)
+
+# Contar valores NA
+quantidade_na <- sum(is.na(idade_es_total$IDADE))
+
+# Transformar a tabela em dataframe
+tabela_final <- as.data.frame(tabela_contagem)
+
+# Renomear as colunas
+colnames(tabela_final) <- c("Categoria", "Quantidade")
+
+# Criar um dataframe com as colunas no formato desejado
+tabela_formatada <- as.data.frame(t(tabela_final$Quantidade))  # Transpor a tabela de quantidade
+colnames(tabela_formatada) <- as.character(tabela_final$Categoria)  # Usar as categorias como nomes das colunas
+
+# Adicionar colunas para Total e NA
+tabela_formatada <- rbind(tabela_formatada)
+
+# Ajustar o dataframe para que o Total e NA sejam colunas
+tabela_formatada <- as.data.frame(cbind(tabela_formatada, Total = sum(tabela_final$Quantidade), "NA" = quantidade_na))
+
+# Exibir a tabela
+kable(tabela_formatada, align = "c", caption = "Quantidade de Valores por Categoria da IDADE")
+
+
+```
+
+```{r echo=FALSE, warning=FALSE}
+
+#SABER QUANTIDDAE DE VALORES NEGATIVOS 
+# Contar quantos valores da coluna IDADE2 são menores que 0
+quantidade_abaixo_zero <- sum(idade_es_total$IDADE2 < 0, na.rm = TRUE)
+
+
+# Contar quantos valores da coluna IDADE3 são menores que 0
+quantidade_abaixo_zero_idadeeanos <- sum(idade_es_total$IDADE3 < 0, na.rm = TRUE)
+
+
+# Criando uma tabela com os resultados
+tabela_valores_negativos <- data.frame(
+  Variáveis = c("IDADE2", "IDADE3"),
+  Quantidade = c(quantidade_abaixo_zero, quantidade_abaixo_zero_idadeeanos)
+)
+
+# Exibindo a tabela
+kable(tabela_valores_negativos, col.names = c("Variáveis", "Quantidade "), align = "c", caption = "Quantidade valores negativos ES")
+```
+
+Igual nos dados do Brasil,  para o Espírito Santo, mesmo com o alto número de NA's na variável data de nascimento, a quantidade de dados faltantes na variável IDADE3 é maior, causada pelos NA's e dados errados na variável IDADE. 
+
+Uma informação interessante é que para o Espírito Santo, não há dados negativos, ou seja, quando filtrado por psicoativos, não haverá problema com dados negativos na base.
+
+
+### Histogramas
+
+```{r echo=FALSE}
+#Histogramas es
+
+par(mfrow = c(1, 2))
+
+hist_idade2_es <-hist(idade_es_total$IDADE2, 
+                      main = paste("Histograma IDADE2 ES"),
+                      xlab = 'Idade', ylab = 'Número de mortos')
+
+hist_IDADE3_es <- hist(idade_es_total$IDADE3, 
+                            main = paste("Histograma IDADE3 ES"),
+                            xlab = 'Idade', ylab = 'Número de mortos')
+
+
+```
+
+### Boxplots 
+
+```{r echo=FALSE}
+# BOXPLOT ES
+par(mfrow = c(1, 2))
+# Criar um boxplot da variável IDADE2
+
+
+boxplot_idade2_es <- boxplot(idade_es_total$IDADE2, 
+                             main = "Boxplot da IDADE2 ES", 
+                             ylab = "Idade") 
+
+#IDADE3
+
+boxplot_IDADE3_es <- boxplot(idade_es_total$IDADE3, 
+                                  main = "Boxplot da IDADE3 ES", 
+                                  ylab = "Idade") 
+```
+
+```{r echo=FALSE}
+# Obter o resumo estatístico das duas colunas
+summary_IDADE2 <- summary(idade_es_total$IDADE2)
+summary_IDADE3 <- summary(idade_es_total$IDADE3)
+
+# Criar uma tabela com os resultados
+tabela_summary <- data.frame(
+  Estatística = names(summary_idade2),
+  IDADE2 = as.numeric(summary_idade2),
+  IDADE3 = as.numeric(summary_IDADE3)
+)
+
+# Exibir a tabela
+kable(tabela_summary, col.names = c("Estatística", "IDADE2", "IDADE3"), align = "c",caption = "Table ES")
+```
+
+
+Após analisado os gráficos do estado do Espírito Santo, nota-se que ele é similar ao do Brasil, isto é, não ocorreu em momento algum uma grande divergência entre país e estado.
+
+Porém é preciso observar que a variável IDADE2 apresenta uma maior extensão nos dados, os valores mínimo e máximo são menores e maiores que na variável IDADE3.
+
+Após essa análise geral, entrou-se no foco da pesquisa. Foi observado se as diferentes formas da variável idade causam diferença ou perda de informações quando filtrado os dados por mortes por psicoativos.
+
+```{r include=FALSE}
+#ler codigos das cids que tem a ver com uso de psicoativos
+codigos_psic <- readLines("codigos_psic.txt")
+
+```
+
+## Análise de idade para o Brasil, filtrando por mortes causadas por psicoativos
+
+```{r include=FALSE}
+### BR PSIC
+idade_br_psic <- idade_br_total%>%
+  filter(str_detect(toupper(CAUSABAS), paste(codigos_psic, collapse = "|")))
+```
+
+```{r, echo=FALSE}
+################ Tabela quantidade por ano ########################
+gerar_tabela_comparacao(idade_br_psic)
+```
+
+```{r echo=FALSE}
+# Contar o número de NAs em cada coluna
+na_counts <- sapply(idade_br_psic, function(col) sum(is.na(col)))
+
+# Obter o total de linhas no dataframe
+total_linhas <- nrow(idade_br_psic)
+
+# Calcular a porcentagem de NAs em cada coluna
+percent_na <- (na_counts / total_linhas) * 100
+
+# Criando uma tabela com os resultados
+tabela_na <- data.frame(
+  Quantidade_NA = na_counts,
+  Porcentagem_NA = paste0(round(percent_na, 2), "%")  # Formatar a porcentagem com duas casas decimais e o símbolo de %
+)
+
+# Exibindo a tabela
+kable(tabela_na, col.names = c("Quantidade de NA", "Porcentagem (%)"), align = "c", caption = "Quantidade de valores faltantes no dataset Brasil por psicoativo")
+```
+
+Analisando a tabela acima, nota-se que diferente do que acontece para os dados totais, a variável IDADE2 apresenta maior quantidade de dados faltantes do que a variável IDADE3. 
+
+```{r echo=FALSE}
+#SABER QUANTIDDAE DE VALORES NEGATIVOS 
+# Contar quantos valores da coluna IDADE2 são menores que 0
+quantidade_abaixo_zero <- sum(idade_br_psic$IDADE2 < 0, na.rm = TRUE)
+
+
+# Contar quantos valores da coluna IDADE3 são menores que 0
+quantidade_abaixo_zero_idadeeanos <- sum(idade_br_psic$IDADE3 < 0, na.rm = TRUE)
+
+
+# Criando uma tabela com os resultados
+tabela_valores_negativos <- data.frame(
+  Variáveis = c("IDADE2", "IDADE3"),
+  Quantidade = c(quantidade_abaixo_zero, quantidade_abaixo_zero_idadeeanos)
+)
+ 
+# Exibindo a tabela
+kable(tabela_valores_negativos, col.names = c("Variáveis", "Quantidade "), align = "c", caption = "Quantidade valores negativos no Brasil por psicoativo")
+```
+
+
+### Histogramas
+```{r echo=FALSE}
+#Histogramas Brasil psic
+par(mfrow = c(1, 2))
+
+hist_idade2_br_psic <-hist(idade_br_psic$IDADE2, 
+     main = paste("Histograma IDADE2 BR Psic"),
+     xlab = 'Idade', ylab = 'Número de mortos')
+axis(1, seq(0, 100, by = 10))
+
+hist_IDADE3_br_psic <- hist(idade_br_psic$IDADE3, 
+     main = paste("Histograma IDADE3 BR Psic"),
+     xlab = 'Idade', ylab = 'Número de mortos')
+axis(1, seq(0, 100, by = 10))
+
+```
+
+
+### Boxplots
+
+```{r echo=FALSE}
+# BOXPLOT BR Psic
+par(mfrow = c(1, 2))
+# Criar um boxplot da variável IDADE2
+boxplot_idade2_br_psic <- boxplot(idade_br_psic$IDADE2, 
+                             main = "Boxplot IDADE2 BR Psic", 
+                             ylab = "Idade") 
+
+#IDADE3
+
+boxplot_IDADE3_br_psic <- boxplot(idade_br_psic$IDADE3, 
+                                  main = "Boxplot IDADE3 BR Psic", 
+                                  ylab = "Idade") 
+```
+
+
+```{r echo=FALSE}
+# Obter o resumo estatístico das duas colunas
+summary_IDADE2_br_psic <- summary(idade_br_psic$IDADE2)
+summary_IDADE3_br_psic <- summary(idade_br_psic$IDADE3)
+
+# Criar uma tabela com os resultados
+tabela_summary_br_psic <- data.frame(
+  Estatística = names(summary_IDADE2_br_psic),
+  IDADE2 = as.integer(summary_IDADE2_br_psic),
+  IDADE3 = as.integer(summary_IDADE3_br_psic)
+)
+
+# Exibir a tabela
+kable(tabela_summary_br_psic, col.names = c("Estatística", "IDADE2", "IDADE3"), align = "c",caption = "Tabela Brasil Psicoativo")
+```
+
+A conclusão final da filtragem por psicoativo no Brasil é similar as outras até aqui, há uma diferença, mas é ínfima e não resulta em grande perda de informações.
+
+## Análise de idade para o Espírito Santo, filtrando por mortes causadas por psicoativos
+
+```{r include=FALSE}
+### ES PSIC
+
+idade_es_psic <- idade_es_total %>%
+  filter(str_detect(toupper(CAUSABAS), paste(codigos_psic, collapse = "|")))
+
+```
+
+```{r, echo=FALSE}
+################ Tabela quantidade por ano ########################
+gerar_tabela_comparacao(idade_es_psic)
+
+```
+
+Nota-se que pela primeira vez ocorreram anos em que as variáveis são 100% iguais.
+
+```{r echo=FALSE}
+# Contar o número de NAs em cada coluna
+na_counts <- sapply(idade_es_psic, function(col) sum(is.na(col)))
+
+# Obter o total de linhas no dataframe
+total_linhas <- nrow(idade_es_psic)
+
+# Calcular a porcentagem de NAs em cada coluna
+percent_na <- (na_counts / total_linhas) * 100
+
+# Criando uma tabela com os resultados
+tabela_na <- data.frame(
+  Quantidade_NA = na_counts,
+  Porcentagem_NA = paste0(round(percent_na, 2), "%")  # Formatar a porcentagem com duas casas decimais e o símbolo de %
+)
+
+# Exibindo a tabela
+kable(tabela_na, col.names = c("Quantidade de NA", "Porcentagem (%)"), align = "c", caption = "Quantidade de valores faltantes no dataset Espírito Santo por psicoativo")
+```
+
+Nota-se que ocorre um padrão diferente quando fltrada as bases totais para mortes pelo uso de psicoativos, vê-se que novamente a IDADE2 apresenta maior número de dados faltantes.
+
+### Histogramas
+
+```{r echo=FALSE}
+#Histogramas es psic
+
+par(mfrow = c(1, 2))
+
+hist_IDADE2_es_psic <-hist(idade_es_psic$IDADE2, 
+                      main = paste("Histograma IDADE2 ES Psic"),
+                      xlab = 'Idade', ylab = 'Número de mortos')
+
+hist_IDADE3_es_psic <- hist(idade_es_psic$IDADE3, 
+                            main = paste("Histograma IDADE3 ES Pisc"),
+                            xlab = 'Idade', ylab = 'Número de mortos')
+
+
+```
+
+### Boxplots 
+
+```{r echo=FALSE}
+# BOXPLOT ES Psic
+par(mfrow = c(1, 2))
+# Criar um boxplot da variável IDADE2
+
+
+boxplot_IDADE2_es_psic <- boxplot(idade_es_psic$IDADE2, 
+                             main = "Boxplot IDADE2 ES Psic", 
+                             ylab = "Idade") 
+
+#IDADE3
+
+boxplot_IDADE3_es_psic <- boxplot(idade_es_psic$IDADE3, 
+                                  main = "Boxplot IDADE3 ES Psic", 
+                                  ylab = "Idade") 
+```
+
+```{r echo=FALSE}
+# Obter o resumo estatístico das duas colunas
+summary_IDADE2_psic <- summary(idade_es_psic$IDADE2)
+summary_IDADE3_psic <- summary(idade_es_psic$IDADE3)
+
+# Criar uma tabela com os resultados
+tabela_summary <- data.frame(
+  Estatística = names(summary_IDADE2_psic),
+  IDADE2 = as.integer(summary_IDADE2_psic),
+  IDADE3 = as.integer(summary_IDADE3_psic)
+)
+
+# Exibir a tabela
+kable(tabela_summary, col.names = c("Estatística", "IDADE2", "IDADE3"), align = "c",caption = "Tabela Espítito Santo por Psicoativo")
+```
+
+ 
+ De forma geral, analisando para todas as áreas e subáreas após a filtragem, nota-se que não houve nenhuma grande diferença. Tem-se alteração apenas no número de NA's em cada coluna. Porém não é algo extremo, é importante notar que mesmo com esse número de NA’s, nos demais indicativos, não ocorre grande influência.
+
+Para todas as áreas no geral, pode-se notar que as diferenças não são extremas em nenhum dos casos, podendo ocorrer alterações nos valores máximos e mínimos, na média e mediana (por uma unidade). 
+
+Após essa percepção, passou-se para a parte de unir as informações das duas opções de variável idade para criar uma variável unificada.
+
+## Análise nova coluna idade
+
+Considerando principalmente as idades filtradas, é possível encontrar uma melhor forma para a variável idade. Isso cumpre o objetivo de otimizar a variável idade.
+
+
+```{r include=FALSE}
+
+dados_idade_novo <- idade_br_total
+
+```
+
+Observando as informações divergentes nas filtragens, tem-se que:
+
+#### ES Psic
+```{r echo=FALSE}
+
+
+# Número de linhas no dataframe
+n_linhas_es_psic <- nrow(idade_es_psic)
+
+# Comparação entre colunas (ES psic)
+resultado_comparacao_es_psic <- idade_es_psic$IDADE2 == idade_es_psic$IDADE3
+
+# Contando quantos são iguais
+count_iguais_es_psic <- sum(resultado_comparacao_es_psic, na.rm = TRUE)
+
+# Linhas onde os valores são diferentes
+linhas_diferentes_es_psic <- which(idade_es_psic$IDADE2 != idade_es_psic$IDADE3)
+
+# Dataframe com as colunas diferentes
+df_diferentes_es_psic <- subset(idade_es_psic, IDADE2 != IDADE3)
+
+# Identificar linhas onde uma coluna é NA e a outra não é NA
+df_diferentes_na_es_psic <- subset(idade_es_psic, (is.na(IDADE2) & !is.na(IDADE3)) | (!is.na(IDADE2) & is.na(IDADE3)))
+
+# Opcional: Unir os dataframes com discrepâncias
+df_diferentes_es_psic <- rbind(df_diferentes_es_psic, df_diferentes_na_es_psic)
+
+print(df_diferentes_es_psic)
+
+```
+
+#### BR Psic
+
+```{r echo=FALSE}
+# Número de linhas no dataframe
+n_linhas_br_psic <- nrow(idade_br_psic)
+
+# Comparação entre colunas (ES psic)
+resultado_comparacao_br_psic <- idade_br_psic$IDADE2 == idade_br_psic$IDADE3
+
+# Contando quantos são iguais
+count_iguais_br_psic <- sum(resultado_comparacao_br_psic, na.rm = TRUE)
+
+# Linhas onde os valores são diferentes
+linhas_diferentes_br_psic <- which(idade_br_psic$IDADE2 != idade_br_psic$IDADE3)
+
+# Dataframe com as colunas diferentes
+df_diferentes_br_psic <- subset(idade_br_psic, IDADE2 != IDADE3)
+
+# Identificar linhas onde uma coluna é NA e a outra não é NA
+df_diferentes_na_br_psic <- subset(idade_br_psic, (is.na(IDADE2) & !is.na(IDADE3)) | (!is.na(IDADE2) & is.na(IDADE3)))
+
+# Opcional: Unir os dataframes com discrepâncias
+df_diferentes_br_psic <- rbind(df_diferentes_br_psic, df_diferentes_na_br_psic)
+
+head(df_diferentes_br_psic)
+```
+
+Analisando os data frames acima, é possível notar que a maior parte dos dados diferentes são resultados da falta de informações na variável data de nascimento, portanto, com o objetivo de ter menor perda de informações, é preferível substituir esses dados pelos da IDADE3. No data frame do Brasil, nota-se que apenas 2 das 162 linhas do data frame de dados são divergentes, tem informações nas duas colunas, porém divergentes, logo, é preciso decidir qual valor escolher, nesse caso a diferença é de uma unidade, logo pode ter ocorrido devido a diferença de meses, portanto pode ser interessante optar pela coluna de diferença entre as datas de óbito e nascimento. 
+
+Essa junção ocorrerá segundo os critérios:\
+  - Caso uma seja NA e a outra não, ficar com a outra;\
+  - Caso seja valor negativo e o outro positivo, ficar com o positivo;\
+  - Caso tenham dois numéricos distintos, será formado (em um primeiro momento) duas colunas e avaliar as situações, uma optando por IDADE2 e a outra por IDADE3.
+
+
+```{r include=FALSE}
+#UNINDO COLUNAS A PARTIR DA CULUNA IDADE2
+
+dados_idade_novo <- dados_idade_novo %>%
+  mutate(
+    idade_unificada_IDADE2 = case_when(
+      # Se um valor for negativo, ficar com o outro
+      IDADE2 < 0 & IDADE3 >= 0 ~ IDADE3,
+      IDADE3 < 0 & IDADE2 >= 0 ~ IDADE2,
+      
+      # Se um for NA e o outro não, ficar com o valor numérico
+      is.na(IDADE2) & !is.na(IDADE3) ~ IDADE3,
+      !is.na(IDADE2) & is.na(IDADE3) ~ IDADE2,
+      
+      # Se forem diferentes e nenhum for negativo ou NA, escolher IDADE2
+      IDADE2 != IDADE3 ~ IDADE2,
+      
+      # Caso contrário, manter IDADE2 (ou poderia usar IDADE3, pois são iguais)
+      TRUE ~ IDADE2
+    )
+  )
+
+#UNINDO COLUNAS A PARTIR DA CULUNA IDADE3
+
+dados_idade_novo <- dados_idade_novo %>%
+  mutate(
+    idade_unificada_IDADE3 = case_when(
+      # Se um valor for negativo, ficar com o outro
+      IDADE2 < 0 & IDADE3 >= 0 ~ IDADE3,
+      IDADE3 < 0 & IDADE2 >= 0 ~ IDADE2,
+      
+      # Se um for NA e o outro não, ficar com o valor numérico
+      is.na(IDADE2) & !is.na(IDADE3) ~ IDADE3,
+      !is.na(IDADE2) & is.na(IDADE3) ~ IDADE2,
+      
+      # Se forem diferentes e nenhum for negativo ou NA, escolher IDADE2
+      IDADE2 != IDADE3 ~ IDADE3,
+      
+      # Caso contrário, manter IDADE2 (ou poderia usar IDADE3, pois são iguais)
+      TRUE ~ IDADE3
+    )
+  )
+
+```
+
+
+Após criadas as colunas idade_unificada_IDADE3 e idade_unificada_IDADE2, tem-se que a quantidade de linhas diferentes entre essas novas colunas criadas é de 226 linhas.
+
+Importante ressaltar que essa análise está com as informações gerais, antes de serem filtradas por psicoativos.
+
+```{r include=FALSE}
+##colunas differentes
+#dataframe com as linhas diferentes 
+df_diferentes_colnovas <- subset(dados_idade_novo, idade_unificada_IDADE2 != idade_unificada_IDADE3)
+#head(df_diferentes_colnovas)
+```
+
+```{r include=FALSE}
+######################### NOVOS DATAFRAMES ################################
+#ES TOTAL
+idade_es_NV <- dados_idade_novo %>%
+  filter(Sigla == "ES")
+
+
+### BR PSIC (permanecendo com idade pelas datas de nascimento e óbito)
+idade_br_psic_NV <- dados_idade_novo%>%
+  filter(str_detect(toupper(CAUSABAS), paste(codigos_psic, collapse = "|")))
+idade_br_psic_NV <- idade_br_psic_NV %>%
+  mutate(idade_unificada = coalesce(idade_unificada_IDADE2,idade_unificada_IDADE3))
+### BR PSIC
+idade_br_psic <- idade_br_total%>%
+  filter(str_detect(toupper(CAUSABAS), paste(codigos_psic, collapse = "|")))
+### ES PSIC
+
+idade_es_psic_NV <- idade_es_NV%>%
+  filter(str_detect(toupper(CAUSABAS), paste(codigos_psic, collapse = "|")))
+idade_es_psic_NV <- idade_es_psic_NV %>%
+  mutate(idade_unificada = coalesce(idade_unificada_IDADE2,idade_unificada_IDADE3))
+
+
+```
+
+### Summarys colunas novas
+
+```{r echo=FALSE}
+# Extrair as estatísticas necessárias de cada variável usando summary()
+extract_summary <- function(x) {
+  stats <- summary(x)
+  return(as.numeric(stats))
+}
+
+# Coletar estatísticas
+stats_IDADE2_dados_idade_novo <- extract_summary(dados_idade_novo$idade_unificada_IDADE2)
+stats_IDADE3_dados_idade_novo <- extract_summary(dados_idade_novo$idade_unificada_IDADE3)
+
+stats_IDADE2_dados_idade_es_NV <- extract_summary(idade_es_NV$idade_unificada_IDADE2)
+stats_IDADE3_dados_idade_es_NV <- extract_summary(idade_es_NV$idade_unificada_IDADE3)
+
+stats_IDADE2_dados_idade_br_psic_NV <- extract_summary(idade_br_psic_NV$idade_unificada_IDADE2)
+stats_IDADE3_dados_idade_br_psic_NV <- extract_summary(idade_br_psic_NV$idade_unificada_IDADE3)
+
+stats_IDADE2_dados_idade_es_psic_NV <- extract_summary(idade_es_psic_NV$idade_unificada_IDADE2)
+stats_IDADE3_dados_idade_es_psic_NV <- extract_summary(idade_es_psic_NV$idade_unificada_IDADE3)
+
+
+# Criar data frame com as estatísticas
+summary_table <- data.frame(
+  Estatística = c("Min.", "1st Qu.", "Median", "Mean", "3rd Qu.", "Max.", "NA's"),
+  `IDADE2` = stats_IDADE2_dados_idade_novo,
+  `IDADE3` = stats_IDADE3_dados_idade_novo,
+  `IDADE2` = stats_IDADE2_dados_idade_es_NV,
+  `IDADE3` = stats_IDADE3_dados_idade_es_NV,
+  `IDADE2` = stats_IDADE2_dados_idade_br_psic_NV,
+  `IDADE3` = stats_IDADE3_dados_idade_br_psic_NV,
+  `IDADE2` = stats_IDADE2_dados_idade_es_psic_NV,
+  `IDADE3` = stats_IDADE3_dados_idade_es_psic_NV
+)
+
+# Criar a tabela com subcolunas
+kable(summary_table, caption = "Resumo das Idades Unificadas por Data Frame e Variável", digits = 2, align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  add_header_above(c(" " = 1, 
+                     "Brasil" = 2, 
+                     "Espírito Santo" = 2, 
+                     "Brasil Psic" = 2, 
+                     "Espírito Santo Psic" = 2))
+
+```
+
+Após a criação das novas colunas, fazendo o sumário das informações descritivas nas 4 bases, sendo elas, Brasil, Brasil Psic, Espírito Santo e  Espírito Santo Psic, obtém-se que as linhas diferentes que restaram não alteram esses indicadores, logo, pode-se concluir que a partir desse momento, a escolha de qual usar não irá acarretar em nenhuma perda de informação devido a divergências nas observações.
+
+### Criação da coluna unificada nos datasets 
+
+```{r include=FALSE}
+### BR  (permanecendo com idade pelas datas de nascimento e óbito)
+dados_idade_novo <- dados_idade_novo %>%
+  mutate(idade_unificada = coalesce(idade_unificada_IDADE2,idade_unificada_IDADE3))
+### ES  (permanecendo com idade pelas datas de nascimento e óbito)
+idade_es_NV <- idade_es_NV %>%
+  mutate(idade_unificada = coalesce(idade_unificada_IDADE2,idade_unificada_IDADE3))
+
+### BR PSIC (permanecendo com idade pelas datas de nascimento e óbito)
+idade_br_psic_NV <- idade_br_psic_NV %>%
+  mutate(idade_unificada = coalesce(idade_unificada_IDADE2,idade_unificada_IDADE3))
+
+### ES PSIC
+idade_es_psic_NV <- idade_es_psic_NV %>%
+  mutate(idade_unificada = coalesce(idade_unificada_IDADE2,idade_unificada_IDADE3))
+```
+
+Foi criada a coluna idade_unificada da forma explicada anteriormente e optando pelas observações presentes na variável IDADE2, que tem as idades criadas com base na diferença de datas.
+
+Para se observar o resultado final, será utilizada visualizações gráficas.
+
+#### Análise gráfica 
+
+#### Histogramas
+
+```{r echo=FALSE}
+#Histograma
+par(mfrow = c(2, 2))
+#BR
+hist_idade_br_novo <- hist(dados_idade_novo$idade_unificada, 
+                           main = paste(" Brasil "),
+                           xlab = 'Idade', ylab = 'Número de mortos')
+#ES
+
+hist_idade_es_novo <- hist(idade_es_NV$idade_unificada, 
+                                 main = paste(" Espírito Santo "),
+                                 xlab = 'Idade', ylab = 'Número de mortos')
+
+
+#BR
+hist_idade_br_PSIC_novo <- hist(idade_br_psic_NV$idade_unificada, 
+                           main = paste(" Brasil Psic "),
+                           xlab = 'Idade', ylab = 'Número de mortos')
+#ES
+
+hist_idade_es_psic_novo <- hist(idade_es_psic_NV$idade_unificada, 
+                                 main = paste("Espírito Santo Psic "),
+                                 xlab = 'Idade', ylab = 'Número de mortos')
+```
+
+#### Boxplot
+
+```{r echo=FALSE}
+par(mfrow = c(2, 2),  # 2 linhas, 2 colunas
+    oma = c(2, 2, 2, 2),  # Reduzir margens externas
+    mar = c(3, 3, 2, 1),  # Reduzir margens internas
+    mgp = c(2, 0.7, 0),   # Ajustar a posição dos rótulos dos eixos
+    cex.lab = 1.2,  # Tamanho da fonte dos rótulos
+    cex.axis = 1.1,  # Tamanho da fonte dos eixos
+    cex.main = 1.5,  # Tamanho da fonte do título
+    las = 1)  # Rotaciona os rótulos dos eixos y para ficarem horizontais
+# BR
+boxplot_idade_br_novo <- boxplot(dados_idade_novo$idade_unificada, 
+                                 main = "Brasil", 
+                                 ylab = "Idade") 
+#ES
+boxplot_idade_es_novo <- boxplot(idade_es_NV$idade_unificada, 
+                                  main = " Espírito Santo", 
+                                  ylab = "Idade") 
+#BR PSIC
+boxplot_idade_br_psic_novo <- boxplot(idade_br_psic_NV$idade_unificada, 
+                                 main = "Brasil Psic", 
+                                 ylab = "Idade") 
+#ES PSIC
+boxplot_idade_es_psic_novo <- boxplot(idade_es_psic_NV$idade_unificada, 
+                                  main = "Espírito Santo Psic", 
+                                  ylab = "Idade") 
+```
+
+#### Gráfico de séries
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#br
+
+#criando variavel categórica para idade
+intervalos <- c(0, 17, 30, 55, Inf)  # Limites dos intervalos: 0-12, 13-24, 25-55, 56+
+categorias <- c("Menor de idade", "Jovem-Adulto", "Adulto", "Idoso")  # Rótulos das categorias
+
+#GRÁFICO DE SÉRIE ANO X OBITO POR IDADE NO BR
+## IDADE2
+# MONTANDO DADOS
+dados_idade_novo$categoria_idade <- cut(dados_idade_novo$idade_unificada, intervalos, labels = categorias)
+dados_idade_novo$DTOBITO <- ymd(dados_idade_novo$DTOBITO)
+dados_idade_novo$ANOOBITO <- year(dados_idade_novo$DTOBITO)
+
+dados_serie_br <- data.frame(
+  dados_idade_novo %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+# GRAFICO
+
+graf_serie_idade_br <- ggplot(data = dados_serie_br, aes(x = ANOOBITO, y = N.obitos,
+                                                                      colour = categoria_idade)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = categoria_idade,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Faixa Etária: ", categoria_idade))) +
+  labs(title = "Óbitos Totais no Brasil por Faixa etária",
+       x="Anos", y="Óbitos Totais", colour = "Faixa etária") +
+  scale_x_continuous(
+    breaks = dados_serie_br$ANOOBITO,
+    labels = dados_serie_br$ANOOBITO)+
+  scale_colour_manual(name = "Faixa etária", values = paleta_series(5),
+                      labels = c("Menor de idade (0-17 anos)",
+                                 "Jovem-Adulto (18 - 30 anos)",
+                                 "Adulto (31 - 55 anos)",
+                                 "Idoso(56+ anos)"))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))                 # Tamanho do texto da legenda
+
+
+graf_serie_idade_br
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#es
+#GRÁFICO DE SÉRIE ANO X OBITO POR IDADE NO es
+
+# MONTANDO DADOS
+idade_es_NV$categoria_idade <- cut(idade_es_NV$idade_unificada, intervalos, labels = categorias)
+idade_es_NV$DTOBITO <- ymd(idade_es_NV$DTOBITO)
+idade_es_NV$ANOOBITO <- year(idade_es_NV$DTOBITO)
+
+dados_serie_es_NV <- data.frame(
+  idade_es_NV %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+# GRAFICO
+
+graf_serie_idade_es <- ggplot(data = dados_serie_es_NV, aes(x = ANOOBITO, y = N.obitos,
+                                                                      colour = categoria_idade)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = categoria_idade,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Faixa Etária: ", categoria_idade))) +
+  labs(title = "Óbitos Totais no Espírito Santo por Faixa etária",
+       x="Anos", y="Óbitos Totais", colour = "Faixa etária") +
+  scale_x_continuous(
+    breaks = dados_serie_es_NV$ANOOBITO,
+    labels = dados_serie_es_NV$ANOOBITO)+
+  scale_colour_manual(name = "Faixa etária", values = paleta_series(5),
+                      labels = c("Menor de idade (0-17 anos)",
+                                 "Jovem-Adulto (18 - 30 anos)",
+                                 "Adulto (31 - 55 anos)",
+                                 "Idoso(56+ anos)"))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))                 # Tamanho do texto da legenda
+
+
+graf_serie_idade_es
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#br psic
+
+#GRÁFICO DE SÉRIE ANO X OBITO POR IDADE NO br
+# MONTANDO DADOS
+idade_br_psic_NV$categoria_idade <- cut(idade_br_psic_NV$idade_unificada, intervalos, labels = categorias)
+idade_br_psic_NV$DTOBITO <- ymd(idade_br_psic_NV$DTOBITO)
+idade_br_psic_NV$ANOOBITO <- year(idade_br_psic_NV$DTOBITO)
+
+dados_serie_idade_br_novo <- data.frame(
+  idade_br_psic_NV %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+# GRAFICO
+
+graf_serie_idade_br_novo<- ggplot(data = dados_serie_idade_br_novo, aes(x = ANOOBITO, y = N.obitos,
+                                                                        colour = categoria_idade)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = categoria_idade,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Faixa Etária: ", categoria_idade))) +
+  labs(title = "Óbitos Totais no BR por Faixa etária por psicoativos",
+       x="Anos", y="Óbitos Totais", colour = "Faixa etária") +
+  scale_x_continuous(
+    breaks = idade_br_psic_NV$ANOOBITO,
+    labels = idade_br_psic_NV$ANOOBITO)+
+  scale_colour_manual(name = "Faixa etária", values = paleta_series(5),
+                      labels = c("Menor de idade (0-17 anos)",
+                                 "Jovem-Adulto (18 - 30 anos)",
+                                 "Adulto (31 - 55 anos)",
+                                 "Idoso(56+ anos)"))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))                 # Tamanho do texto da legenda
+
+
+graf_serie_idade_br_novo
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#GRÁFICO DE SÉRIE ANO X OBITO POR IDADE NO es
+# MONTANDO DADOS
+idade_es_psic_NV$categoria_idade <- cut(idade_es_psic_NV$idade_unificada, intervalos, labels = categorias)
+idade_es_psic_NV$DTOBITO <- ymd(idade_es_psic_NV$DTOBITO)
+idade_es_psic_NV$ANOOBITO <- year(idade_es_psic_NV$DTOBITO)
+
+dados_serie_idade_es_novo <- data.frame(
+  idade_es_psic_NV %>% group_by(ANOOBITO, categoria_idade) %>%
+    summarise(N.obitos = n())
+)
+# GRAFICO
+
+graf_serie_idade_es_psic<- ggplot(data = dados_serie_idade_es_novo, aes(x = ANOOBITO, y = N.obitos,
+                                                                             colour = categoria_idade)) +
+  geom_line(linewidth = 0.5, linetype = "solid") +
+  geom_point(shape = 15, aes(colour = categoria_idade,
+                             text  = paste("Ano: ", ANOOBITO,
+                                           "<br>Quantidade: ", N.obitos,
+                                           "<br>Faixa Etária: ", categoria_idade))) +
+  labs(title = "Óbitos Totais no ES por Faixa etária por psicoativos",
+       x="Anos", y="Óbitos Totais", colour = "Faixa etária") +
+  scale_x_continuous(
+    breaks = idade_es_psic_NV$ANOOBITO,
+    labels = idade_es_psic_NV$ANOOBITO)+
+  scale_colour_manual(name = "Faixa etária", values = paleta_series(5),
+                      labels = c("Menor de idade (0-17 anos)",
+                                 "Jovem-Adulto (18 - 30 anos)",
+                                 "Adulto (31 - 55 anos)",
+                                 "Idoso(56+ anos)"))+
+  theme_classic()+
+  theme(
+    plot.title = element_text(size = 14),   # Tamanho e estilo do título do gráfico
+    axis.title = element_text(size = 15),                 # Tamanho dos títulos dos eixos
+    axis.text = element_text(size = 12),                  # Tamanho dos textos dos eixos
+    legend.title = element_text(size = size_titulo_legenda),
+    legend.text = element_text(size = size_texto_legenda))                 # Tamanho do texto da legenda
+
+
+graf_serie_idade_es_psic
+
+```
+
+## Conclusão
+
+As informações brutas são representativas e não apresentam grandes perdas de dados. No entanto, para melhorar a análise e minimizar ao máximo essas perdas, constatou-se que o ideal é combinar ambas as abordagens, permitindo que uma compense as lacunas da outra. No final, as divergências restantes são mínimas e não impactam significativamente os resultados. Portanto, qualquer uma das formas pode ser escolhida. Para esta análise, optou-se pela diferença entre as datas de óbito e nascimento como a metodologia preferida.
+
+Vale ressaltar que o número de valores ausentes (NA's) diminuiu significativamente após a criação da variável unificada. Inicialmente, no dataset completo (Brasil), a coluna IDADE2 possuía 45.130 (quarenta e cinco mil) NA's, e a variável IDADE3, 56.382 (cinquenta e seis mil) NA's. Na variável unificada, esse número foi reduzido para 29.505 (vinte e nove mil) NA's, representando uma diminuição de 15.625 (quinze mil) e 26.877 (vinte e seis mil) NA's, respectivamente. Quando filtrado o dataset para psicoativos, haviam inicialmente 621 e 391 NA's em cada variável, e ao final esse número caiu para 313, uma redução de 308 e 78 valores ausentes respectivamente. 
