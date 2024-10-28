@@ -30,7 +30,7 @@ kable(rz,col.names=c("Variável","Descrição"),caption="Descrição das variáv
 ``` 
  
 ####
-Devido a grande quantidade de CIDs foi necessário juntá-las em grupos. Na Tabela 2 estão as descrições desses grupos.
+Devido a grande quantidade de CIDs foi necessário juntá-las em grupos. Na Tabela 2 estão as descrições desses grupos. Eles foram definidos de acordo com os agrupamentos da lista do departamento de informação do SUS (DATASUS) que descreve por completo a CID-10. A lista pode ser acessada em: http://www2.datasus.gov.br/cid10/V2008/WebHelp/listacateg.htm. 
 
 ```{r,echo=FALSE}
 r1=c("F100-F199 e F55","G312, G620-G622 e G721-G722","I426-I427 e I952","J662 e J702-J704","K292, K700-K709 e K860","M342","N140-N142","P042-P044, P961 e Q860","R780-R785","X400-X469","X600-X699","X850-X859","Y100-Y169","Y450-Y579")
@@ -39,6 +39,8 @@ r2=c("Transtornos mentais e comportamentais","Doenças do sistema nervoso ","Doe
 rz=cbind(r1,r2)
 kable(rz,col.names=c("Grupo","Descrição"),caption="Descrição dos agrupamentos de CIDs")
 ``` 
+####
+Vale ressaltar que foram desconsideradas as CIDs X45.0-X46.9, pois as mesmas representam casos de intoxicação acidental relacionados a substâncias usadas em pinturas, serviços gerais e área indústrial, ou seja, tais CIDs estão relacionadas a acidentes de trabalho. As CIDs X65-X66 servem para as mesmas substâncias, porém dessa vez quando foram usadas por vontade própria, essas sim foram contadas nas análises como psicoativos.
 
 # Objetivos
 
@@ -388,4 +390,9 @@ geom_tile(color = "grey90",aes(fill = var_plot[,3])) + scale_fill_gradientn(colo
 ## CONCLUSÕES
 
 ####
-No caso do Brasil, todas as variáveis sociodemográficas estavam associadas com mortes relacionadas ao grupo (R780-R785). O comportamento do ES é similar ao do Brasil no geral. A maioria das mortes tem relação com os grupos de CIDs (F100-F199 e F55) e (K292, K700-K709 e K860) no Brasil e no ES.
+Enquanto que no Espírito Santo todas as variáveis sociodemográficas estavam estatisticamente associadas com mortes relacionadas ao grupo R780-R785 (Presença de drogas e de outras substâncias normalmente não encontradas no sangue), no Brasil nenhuma variável apresentou associação com esse grupo. Chama atenção que o grupo F100-F199 (Transtornos mentais e comportamentais) e o grupo K292, K700-K709 e K860 (Doenças do aparelho digestivo) apresentaram associação estatística com todas as variáveis sociodemográficas tanto no ES quanto no Brasil, a maior parte das CIDs desses dois agrupamentos está relacionada com o uso de álcool, mostrando assim que o uso de álcool impacta nessas associações. É possível perceber que o comportamento do ES foi similar ao do Brasil no geral. 
+
+## OBSERVAÇÕES
+
+####
+Além dessa análise, também foi realizada uma análise com agrupamentos que consideravam tipos de droga (maconha, cocaína, álcool e etc), mas devido ao fato de que muitas CIDs não especificam o tipo de droga, englobam diversas drogas ou ainda descrevem casos bem específicos, não se conseguiu fazer bons agrupamentos. Sendo assim, grande parte dos casos acaba se concentrando em grupos mais gerais, que não traziam muita informação. Nesse caso, para se fazer um bom agrupamento por tipos de droga seria necessário alguém com um conhecimento mais específico para determinar qual droga que uma determinada CID poderia estar mais relacionada e assim auxiliar na construção dos agrupamentos.
